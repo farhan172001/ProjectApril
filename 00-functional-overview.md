@@ -1,0 +1,554 @@
+# CMWS Functional Overview
+
+## What Is CMWS?
+
+CMWS -- the Content Management Workflow System -- is the back-office operations platform that Prudential Group Insurance uses to receive, route, process, and archive every piece of paper and electronic document that flows through the division. Think of it as a digital mailroom fused with a task manager: physical mail arrives at scanning centers, gets digitized, lands in workflow queues, and is worked by claims examiners and service representatives until the item is complete. CMWS tracks who touched what, when they touched it, how long it took, and whether their work passed quality review. It handles roughly 21 distinct workflow pipelines covering life claims, enrollment, client on-boarding, conversions, medical underwriting, and several large client-specific operations. Because these workflows process real insurance claims affecting real people -- death benefits, disability extensions, policy conversions -- accuracy and auditability are not optional.
+
+**Who uses it:** Claims examiners, indexers, shared-services scanners, supervisors, quality reviewers, records administrators, enrollment specialists, and automated feed systems (imaging pipeline, QTS, ESB).
+
+**Why it matters:** Every document in CMWS is tied to a person's insurance coverage. A misrouted death claim or a lost conversion application has direct financial and legal consequences. The system is the single source of truth for Group Insurance document processing.
+
+---
+
+## Section 1: Claim Workflow Processing
+
+CMWS contains 21 registered `WorkflowInstance` beans (defined in `WebContent/config/workflows.xml`). Each workflow has its own set of database tables for workflow state (`_WF`), metadata (`_META`), document storage (`_STOR`), reporting (`_RPT`), case management (`_CASE`), workflow management (`_WFMGMT`), quality review (`_QR`), and optionally letters (`_LTR`, `_LTRSTOR`) and IPR (`_IPR`).
+
+### Group 1: Core Claims (LCMS Family)
+
+#### LCMS - GLCD (ID 102) -- Life Claim Management System, Group Life Claims Division
+The primary life claims workflow. Handles death claims, accidental death claims, beneficiary designations, and waiver-of-premium documents for Prudential's standard group life insurance products. Documents arrive via the imaging pipeline with form codes (e.g., `87101` for death claims, `87105` for accidental death, `87166` for preferred beneficiary). Items land in an auto-assign queue and are routed to either the GLCD Unassigned queue or the Waiver Unassigned queue depending on form code. This is an active processing workflow with full queue management.
+
+#### LCMS - OSGLI (ID 104) -- Life Claim Management System, Office of Servicemembers' Group Life Insurance
+A sub-workflow of LCMS dedicated to OSGLI claims -- the federal Servicemembers' Group Life Insurance program that Prudential administers under contract with the Department of Veterans Affairs. Handles OSGLI-specific death claims (form code `87301`) and miscellaneous documents (form code `87399`). Has its own unassigned/assigned queue pair. Active processing workflow.
+
+#### LCMS - PEB (ID 105) -- Life Claim Management System, Prudential Employee Benefits
+Another LCMS sub-workflow for claims originating from Prudential's own employee benefit plans. Processes death claims (form code `87701`), accidental death claims (`87705`), and waiver-of-premium documents. Has both standard and waiver queue tracks. Active processing workflow.
+
+#### LCMS - ILI (ID 107) -- Life Claim Management System, Individual Life Insurance
+Added in 2016 as part of the "Waiver of Premium" project. Handles waiver-of-premium claims for individual life insurance policies. All documents in this sub-workflow are waiver claim-create forms. Has its own waiver unassigned/assigned queue pair. Active processing workflow.
+
+### Group 2: Client On-Boarding
+
+#### COB (ID 11) -- Client On-Boarding
+Manages the end-to-end process of setting up new group insurance clients. This is not a document-scanning workflow in the traditional sense -- it is a project-management workflow where each "work type" represents a client implementation project. Work types have milestones, tasks, checklists, contacts (account managers, underwriters), and associated documents. Supports market segments (Middle Market, National Account, Association), group types (All Prudential, JRW Direct, JRW Joint), and regions (East, West). Features include approval queues, renewal staging, pending work types, and archive queues. Has a dedicated "Manage Tasks/Checklist" editor. Sends email notifications for control number requests, milestone completions, overdue items, and new document versions. Active processing workflow with case management via work-type folders.
+
+#### SM COB (ID 12) -- Small Market Client On-Boarding
+A variant of COB tailored for Prudential's small-market segment. Shares much of the COB codebase (`COBConstants`, `COBAutoAssign`) but has its own queue structure (active, exception, completed, deleted, pending, policy change queues). Has a "Manage Tasks" editor (without checklists). Supports QR sampling. Active processing workflow.
+
+### Group 3: Product-Specific
+
+#### OSGLI Administration (ID 3) -- Office of Servicemembers' Group Life Insurance
+The full operational workflow for administering OSGLI policies -- distinct from the LCMS-OSGLI claims sub-workflow above. Handles customer service, beneficiary designations, complaints, checks, new business applications, reinstatements, return-to-duty requests, and disability extensions. Features an extensive queue structure: Customer Service, Beneficiary, Complaints, Checks, multiple pending queues (MedUW, Regular, Compass, Disability, Conversion), ODC New Business, ODC Reinstatement, SuperUser queues, and records management queues (Destruction, Hold Order, Research). Has a Customer File search feature for looking up all documents related to a customer. Supports case folders organized by type (New Business, Return to Duty, Reinstatement, Customer Service, Disability Extension). Has its own QR system with multiple statuses including revalidation. Active processing workflow with full case management.
+
+#### GUL/GVUL Management (ID 9) -- Group Universal Life / Group Variable Universal Life
+Handles administration of Prudential's GUL and GVUL products -- permanent life insurance policies with cash value components. Processes action request forms, beneficiary designations, EFT documents, state replacement forms, death notifications, checks, invoices, and undeliverable mail. Has specialized queues for AICPA compliance, regulatory compliance, GUL-specific, GVUL-specific, PURS (Purchases), EFT, client coordinator, approval, QA, check, and invoice processing. Features case folders and death claim folders. Has product types (GVUL, GUL, PURS) and special privileges for EFT updates, check updates, address approval, and annotation removal. Supports records management with destruction, hold order, and research queues. Active processing workflow with extensive case management.
+
+#### LCNV (ID 8) -- Life Conversions
+Manages the conversion of group life insurance policies to individual policies when employees leave their employer. Handles conversion applications, conversion notices, conversion checks, kit requests, and brochure management. Features a multi-stage processing pipeline: Conversion Processing, Miscellaneous, Pending (Info/Legal/Application), Appeals, Treasury (approval/denied), Service, and Shared Services (Mail/Fax/Rescan/QR/Delete). Has a Brochure Listing feature for managing conversion kit brochures. Supports letter generation for closing letters. Treasury approval involves a two-stage approval process (application approved + treasury approved). Active processing workflow with case management and letter generation.
+
+#### MU (ID 101) -- Medical Underwriting
+Handles medical underwriting documents -- Evidence of Insurability (EOI) applications, medical records, and authorization forms. Documents arrive from paper scanning, fax, and user-driven letters. Features queues for auto-assign, application processing, CPA (Centralized Processing Area) application/holding/troubled, long-form intake, short-form intake, special requests, intake assigned, authorization, unrecognized, and processed. Supports AICPA location tracking. Has a case listing feature and a "Manage Control No/ID" admin function for supervisors. Integrates with external MU application coverage services. Active processing workflow.
+
+### Group 4: Client-Specific
+
+#### Walmart (ID 7) -- Walmart
+A dedicated workflow for Prudential's Walmart account -- one of the largest group insurance clients. Acts as a major routing hub: scanned Walmart documents are classified and either processed within the Walmart workflow or transferred to other workflows (LRK, LCNV, ESC, Verizon, GUL/GVUL, NJEA, MLBO, COSC, CRM). Features case folders, letter generation (with a dedicated letter creation queue), auto-assignment, QR sampling, and a services queue for general processing. Has status tracking (New Case, New Document Received, Pending Info, Recovered, QR Selected, QR Correction, Completed). Supports Shared Services rescan and deleted queues. Active processing workflow with case management and letter generation.
+
+#### Verizon (ID 13) -- Verizon
+A dedicated workflow for Prudential's Verizon account. Similar to Walmart in that it serves as both a processing workflow and a routing hub. Can transfer documents to Walmart, LRK, LCNV, ESC, GUL/GVUL, NJEA, MLBO, COSC, and CRM. Has its own QR queue and auto-assignment. Is the only workflow with a dedicated IPR table (`VERIZON_IPR`). Active processing workflow.
+
+### Group 5: Operational
+
+#### LRK/LPM (ID 1) -- Life Record Keeping / Life Premium Management
+The original CMWS workflow and one of the most heavily used. Handles premium accounting documents for group life insurance -- payments, policy changes, billing adjustments, and general correspondence. Associated business units include Life Record Keeping (LRK), National Client Service Center (NCSC), Premium Accounting (PREMACCT), and Mid/Large Life Case Management (MLLCM). Has a case listing feature and supports QR sampling. Active processing workflow with case management.
+
+#### Lockbox (ID 2) -- COSC/MLBO Lockbox
+Processes scanned mail from Prudential's lockbox locations -- the physical P.O. boxes where clients send payments, enrollment forms, and correspondence. Handles an extensive set of document types: payments, miscellaneous, check pre-deposits, requests for group insurance, sales file documentation, bankruptcy, W-9, Aetna PHC, lapse requests, bill frequency changes, payment protests, special handling, client contact, activity sheets, add/new issues, year-end, signed contracts, census, BOR changes, name changes, billing validation, and NJEA-specific documents. Routes based on fax number, P.O. box, and business type (COSC vs. MLBO). Has specialized queues for COSC and MLBO (roster/eligibility, billing/payment, account consultant, case install management, pending billing/eligibility, eligibility review), plus NJEA queues, a privacy/HIPAA queue, and check pre-deposit. Has a case listing feature with separate NJEA case listing. Active processing workflow.
+
+#### ESC (ID 10) -- Enrollment Support Center
+Handles enrollment-related documents and escalations. Processes enrollment applications, short-form and long-form Evidence of Insurability (EOI), beneficiary designations, miscellaneous documents, returned mail, archived documents, Epiphany requests, regulatory complaints, formal complaints, Office of Chairman complaints, and general correspondence. Supports two business types: ESC (enrollment support) and CRM (complaint/regulatory management), each with their own case folders, queues (incoming, pending, completed, deleted), and document types. Has shared services queues for rescan and delete. Features case listing, letter generation, and EOI routing. Active processing workflow with case management and letter generation.
+
+#### EPR (ID 14) -- Enrollment Campaign Management (formerly Enrollment Processing and Reporting)
+Manages enrollment campaigns as project-like work types, similar to COB. Each campaign is a folder with tasks, milestones, and an Enrollment Admin (EAS) search interface. Features a dashboard for inflight campaign monitoring. Has queues for active, exception, completed, deleted, draft, model, and auto-assign. Supports email notifications for initial activation, assignment, task changes, reminders, at-risk/past-due alerts, cancellations, and QR selection. Has a QR process integrated with task completion (Initiate QR, Perform QR). Active processing workflow with dashboard reporting.
+
+### Group 6: Archives
+
+#### Contracts Archive (ID 4) -- Contracts Archive
+A read-only archive for group insurance contract documents. No reporting, no case management, no QR, no letters. Users can search and view contract documents but cannot process them through queues. Archive-only workflow.
+
+#### Underwriting Archive (ID 5) -- Underwriting Archive
+A read-only archive for underwriting documents. Supports retrieval via both the CMWS document store and Filenet (via EDM; formerly Documentum/DCTM) for legacy documents. Has special Link2GI integration for external access. Archive-only workflow.
+
+#### Proposals Archive (ID 6) -- Proposal Unit Archive
+A read-only archive for proposal documents. No reporting, no case management, no QR. Archive-only workflow.
+
+#### OSGLI Archive (ID 15) -- OSGLI Archive
+An archive for completed OSGLI documents. Added later (noted as "GI Auth Osgli Archive change" in code). Unlike the other archives, it has reporting, case management, and QR capabilities -- suggesting it holds recently completed items that may still need review. Users with OSGLI access automatically get OSGLI Archive access (enforced in `AuthorizationService`). Semi-active workflow.
+
+#### DCMS Archive (ID 103) -- Document and Correspondence Management System Archive
+An archive for the legacy DCMS system. Documents are stored in Filenet (via EDM; formerly accessed through Documentum) rather than the standard CMWS storage layer. Document IDs can contain compound keys (`documentId;claimId;correspondenceSeqNum`). Supports a PCMS (workflowId 106) variant that shares the same storage. Archive-only workflow.
+
+### Group 7: Other
+
+Note: There is no workflow ID 106 registered as a bean, but the code references `PCMS_WORKFLOWID = 106` as a variant of DCMS that uses a different credential (`pcms_username`/`pcms_password`, a legacy Documentum-era configuration).
+
+---
+
+## Section 2: Cross-Workflow Dependencies
+
+Cross-workflow transfers are one of the most important and complex aspects of CMWS. When a document arrives in one workflow but actually belongs in another, the system creates a copy in the target workflow, enqueues it, and removes the original from the source workflow's active queue. This is handled by `TransferHelper.java` (`com.pru.gi.workflow.queues.TransferHelper`), which copies the document content, copies common metadata fields (SSN, batch number, control number, scan info, verifier info), and prefixes the batch number with the source workflow ID for traceability.
+
+### Transfer Map
+
+The following transfers exist in the codebase, organized by source workflow:
+
+**From Walmart (7) -- the primary routing hub:**
+- Walmart -> LRK (WalMartTransferLRK)
+- Walmart -> NJEA/Lockbox (WalmartTransferNJEA)
+- Walmart -> MLBO/Lockbox (WalmartTransferMLBO)
+- Walmart -> COSC/Lockbox (WalmartTransferCOSC)
+- Walmart -> GUL/GVUL (WalmartTransferGULGVUL)
+- Walmart -> LCNV (TransferToLCNV)
+- Walmart -> ESC (TransferToESC)
+- Walmart -> Verizon (TransferToVerizon)
+- Walmart -> CRM/ESC (TransferToCRM)
+
+**From Verizon (13) -- second routing hub:**
+- Verizon -> Walmart (TransferToWalmart)
+- Verizon -> LRK/RKS (TransferToRKS)
+- Verizon -> NJEA/Lockbox (TransferToNJEA)
+- Verizon -> MLBO/Lockbox (TransferToMLBO)
+- Verizon -> COSC/Lockbox (TransferToCOSC)
+- Verizon -> GUL/GVUL (TransferToGULGVUL)
+- Verizon -> LCNV (TransferToLCNV)
+- Verizon -> ESC (TransferToESC)
+- Verizon -> CRM/ESC (TransferToCRM)
+
+**From LRK (1):**
+- LRK -> Walmart (LRKTransferWalMart)
+- LRK -> NCSC/Lockbox (LRKTransferNCSC)
+- LRK -> MLLCM/Lockbox (LRKTransferMLLCM)
+- LRK -> NJEA/Lockbox (LRKTransferNJEA)
+- LRK -> GUL/GVUL (LPMTransferGULGVUL)
+- LRK -> LCNV (TransferToLCNV)
+- LRK -> ESC (TransferToESC)
+- LRK -> Verizon (TransferToVerizon)
+- LRK -> CRM/ESC (TransferToCRM)
+
+**From Lockbox (2):**
+- Lockbox -> Walmart (LockboxTransferWalmart)
+- Lockbox -> LRK (LockboxTransferLRK)
+- Lockbox -> GUL/GVUL (LockboxTransferGULGVUL)
+- Lockbox -> LCNV (TransferToLCNV)
+- Lockbox -> ESC (TransferToESC)
+- Lockbox -> Verizon (TransferToVerizon)
+- Lockbox -> HIPAA (TransferToHIPAA)
+- Lockbox -> CRM/ESC (TransferToCRM)
+
+**From LCNV (8):**
+- LCNV -> Walmart (TransferToWalmart)
+- LCNV -> LPM/LRK (TransferToLPM)
+- LCNV -> NJEA/Lockbox (TransferToNJEA)
+- LCNV -> MLBO/Lockbox (TransferToMLBO)
+- LCNV -> COSC/Lockbox (TransferToCOSC)
+- LCNV -> GUL/GVUL (LCNVTransferGULGVUL)
+- LCNV -> ESC (TransferToESC)
+- LCNV -> Verizon (TransferToVerizon)
+- LCNV -> CRM/ESC (TransferToCRM)
+
+**From GUL/GVUL (9):**
+- GUL/GVUL -> Walmart (TransferToWalmart)
+- GUL/GVUL -> LPM/LRK (TransferToLPM)
+- GUL/GVUL -> NJEA/Lockbox (TransferToNJEA)
+- GUL/GVUL -> MLBO/Lockbox (TransferToMLBO)
+- GUL/GVUL -> COSC/Lockbox (TransferToCOSC)
+- GUL/GVUL -> LCNV (TransferToLCNV)
+- GUL/GVUL -> ESC (TransferToESC)
+- GUL/GVUL -> Verizon (TransferToVerizon)
+- GUL/GVUL -> CRM/ESC (TransferToCRM)
+
+**From ESC (10):**
+- ESC -> Walmart (TransferToWalmart)
+- ESC -> LPM/LRK (TransferToLPM)
+- ESC -> NJEA/Lockbox (TransferToNJEA)
+- ESC -> MLBO/Lockbox (TransferToMLBO)
+- ESC -> COSC/Lockbox (TransferToCOSC)
+- ESC -> GUL/GVUL (TransferToGULGVUL)
+- ESC -> LCNV (TransferToLCNV)
+- ESC -> Verizon (TransferToVerizon)
+- ESC -> CRM/ESC (TransferToCRM)
+- ESC -> ESC itself (TransferToESC -- re-routing within ESC)
+
+**From LCMS (102):**
+- LCMS -> LCMS-PEB (TransferToLCMSPEB)
+- LCMS -> LCMS-GLCD (TransferToLCMSGLCD)
+- Internal routing via TransferHelperLCMS between sub-workflows
+
+### Key Patterns
+
+1. **Walmart and Verizon are routing hubs.** Both can transfer to nearly every other active workflow. Walmart has 9 outbound transfer targets; Verizon has 9 as well. Walmart additionally acts as a document classification hub where scanned documents are sorted and routed to the correct downstream workflow.
+
+2. **ESC is both an escalation catch-all and the most connected workflow.** Every major workflow can transfer TO ESC. ESC also has 12+ outbound transfer targets (including a self-transfer for re-routing within ESC), making it the most connected domain. CRM (Complaint/Regulatory Management) is a sub-type within ESC that receives transfers labeled "TransferToCRM."
+
+3. **Lockbox sub-targets (NJEA, MLBO, COSC) are reached via named transfer classes** rather than a generic "TransferToLockbox." Each maps to a specific business unit within the Lockbox workflow.
+
+4. **LCMS sub-workflows transfer internally.** Documents entering LCMS auto-assign are routed to GLCD, PEB, OSGLI, or ILI sub-workflows based on form code. `TransferHelperLCMS` manages this routing.
+
+5. **Records management triggers on transfer.** When items are transferred OUT of GUL/GVUL (workflow 9) or OSGLI (workflow 3), the system sets a records-management destruction date via `GulGvulRecordsAdminHelper` or `OSGLIRecordsAdminHelper`.
+
+### Cross-Workflow Transfer Flowchart
+
+```mermaid
+flowchart LR
+    WMT[Walmart<br/>ID 7] --> LRK[LRK<br/>ID 1]
+    WMT --> LBX[Lockbox<br/>ID 2]
+    WMT --> GG[GUL/GVUL<br/>ID 9]
+    WMT --> LCNV[LCNV<br/>ID 8]
+    WMT --> ESC[ESC<br/>ID 10]
+    WMT --> VZ[Verizon<br/>ID 13]
+    WMT --> CRM[CRM<br/>via ESC]
+
+    VZ --> WMT
+    VZ --> LRK
+    VZ --> LBX
+    VZ --> GG
+    VZ --> LCNV
+    VZ --> ESC
+    VZ --> CRM
+
+    LRK --> WMT
+    LRK --> LBX
+    LRK --> GG
+    LRK --> LCNV
+    LRK --> ESC
+    LRK --> VZ
+    LRK --> CRM
+
+    LBX --> WMT
+    LBX --> LRK
+    LBX --> GG
+    LBX --> LCNV
+    LBX --> ESC
+    LBX --> VZ
+    LBX --> CRM
+
+    LCNV --> WMT
+    LCNV --> LRK
+    LCNV --> LBX
+    LCNV --> GG
+    LCNV --> ESC
+    LCNV --> VZ
+    LCNV --> CRM
+
+    GG --> WMT
+    GG --> LRK
+    GG --> LBX
+    GG --> LCNV
+    GG --> ESC
+    GG --> VZ
+    GG --> CRM
+
+    ESC --> WMT
+    ESC --> LRK
+    ESC --> LBX
+    ESC --> GG
+    ESC --> LCNV
+    ESC --> VZ
+    ESC --> CRM
+
+    LCMS[LCMS<br/>ID 102] --> GLCD[LCMS-GLCD]
+    LCMS --> PEB[LCMS-PEB<br/>ID 105]
+    LCMS --> LOSGLI[LCMS-OSGLI<br/>ID 104]
+    LCMS --> ILI[LCMS-ILI<br/>ID 107]
+```
+
+---
+
+## Section 3: Queue Management and Auto-Assignment
+
+Every workflow organizes its work items into **queues** -- named containers that represent a stage in the processing pipeline. A typical workflow has an auto-assign queue, one or more processing queues, pending queues, QR queues, completed queues, and deleted queues. Some workflows add specialized queues (e.g., Lockbox has separate COSC and MLBO billing/eligibility queues; GUL/GVUL has AICPA, regulatory compliance, EFT, check, and invoice queues).
+
+**Auto-Assignment** is handled by domain-specific classes: `LRKAutoAssign`, `LockboxAutoAssign`, `OSGLIAutoAssign`, `WalmartAutoAssign`, `VerizonAutoAssign`, `LcnvAutoAssign`, `GulGvulAutoAssign`, `ESCAutoAssign`, `COBAutoAssign`, `SMCOBAutoAssign`, `EPRAutoAssign`, `MUAutoAssign`, and `LCMSAutoAssign`. Each implements routing rules specific to its domain. For example, `LockboxAutoAssign` routes based on fax number, P.O. box number, document type, and business type (COSC vs. MLBO). `LCMSAutoAssign` routes based on form code to determine the correct sub-workflow (GLCD, PEB, OSGLI, or ILI). All auto-assign classes use the special user ID `AUTOASG` for audit trail purposes.
+
+**"Get Next"** is the primary way examiners pull work. Instead of cherry-picking items from a queue, an examiner clicks "Get Next" and the system assigns them the highest-priority unassigned item. The `getNextCount` parameter (visible in `cmwsmain.jsp`) allows configuring how many items are pulled at once.
+
+**Queue Views** let supervisors see all items in a queue, their status, who they are assigned to, and their priority. The toolbar in `cmwsmain.jsp` provides buttons for Inbox (user's assigned items), Queues (browse a specific queue), and Search (find items across the workflow).
+
+**Queue actions** available from the toolbar include: Reserve (lock an item to yourself), Assign (give an item to another user), Unreserve (release your lock), Unassign (remove assignment), Move (transfer to a different queue within the same workflow), Complete (mark as done), and Approve/Deny (for workflows with approval processes). Each action is permission-controlled.
+
+---
+
+## Section 4: Document Management and Imaging
+
+CMWS stores documents through a layered storage architecture. The `DocumentStorageFacade` is the entry point, and the full call chain is: `DocumentStorageFacade` -> `CMWSStorageProcess` -> `DocumentumRepositoryProcess` -> `FilennetDataAccess` -> `EdmTransformationService` -> `EdmServiceImpl` -> EDM REST API -> Filenet. Note that `FilennetDataAccess` is a misnomer -- it is purely an EDM wrapper now; all legacy Documentum methods are stubbed out returning false. The system currently integrates with **Filenet** (via the **EDM** middleware REST API at `api-{env}.prudential.com/gt/edm/v2/documents`) for document content storage. Size-based routing applies: files 200MB or smaller use direct upload, while files larger than 200MB use an event-publish flow with polling. Each workflow has a configured storage engine ID (`_STOR`) and repository. The `edm_*.xml` config files define per-environment EDM endpoints, while `repositories_*.xml` files contain legacy Helix URLs (`hlxrtvapi`) that are being migrated away.
+
+**Document ingestion** happens through several paths:
+1. **GIAL Batch Ingestion Pipeline** -- Physical mail is scanned at service centers and submitted as XML batch files. **GIAL** ("General Image and Artifact Loading") is a **separate WAR** (`gial.war`) deployed at the `/GIAL` context path. GIAL is a batch document ingestion pipeline -- it accepts XML batch files from scanning/batch systems, validates them against a BatchControl database, transforms images (e.g., PDF to TIFF), and then **calls CMWSWeb** to store and enqueue the documents. Specifically, GIAL makes HTTP POST calls to `/CMWS/Workflow/PutDocument` to store documents, SOAP calls to `MetadataServiceFacade` to update metadata, and SOAP calls to `WorkflowServiceFacade` to enqueue documents into workflow queues. The flow is: `Scanner/Batch System -> GIAL (transform + validate) -> CMWSWeb (store + enqueue) -> EDM/Filenet`. GIAL has its own parallel copy of 22 EDM classes for its EDM integration (not shared with CMWSWeb). Workflow-specific loaders (`DefaultLoader`, `LcmsLoader`, `MuLoader`, `OSGLILoader`) handle domain-specific metadata mapping and claim ID lookups. **Important:** GIAL calls CMWSWeb, not the other way around -- CMWSWeb does not depend on or call GIAL.
+2. **PutDocument servlet** -- External systems (including GIAL) POST documents via HTTP to `/CMWS/Workflow/PutDocument` with workflow ID, document type, and content. Returns a document ID and timestamp in XML.
+3. **PutLetter servlet** -- Letter generation system POSTs generated letters, which are automatically foldered into the appropriate case and optionally added to a print queue.
+4. **Notification Events** -- Automated events (defined in `NotificationEventConstants`) can trigger document creation, metadata updates, queue moves, and assignment changes. The imaging pipeline workflow automation supports LPM, COB, GUL/GVUL, LCNV, OSGLI, Verizon, Lockbox, ESC, and Walmart.
+
+**Document retrieval** is handled by the `GetDocument` servlet, which enforces authorization checks (TAM group membership, control number access, document type access) before streaming the document content. For GUL/GVUL, additional privilege checks gate access to EFT and check documents. PDF documents can receive a watermark overlay via iText.
+
+**ImageViewer** (`Project_Workspace/ImageViewer`) is a **253-file Java Swing applet** that goes far beyond simple document viewing. It is deployed as packed/signed JARs within `CMWS.war` and runs as a browser applet. Key capabilities include:
+- **Document viewing:** Split-view, thumbnails, multi-page TIFF navigation, zoom, rotate, and pan.
+- **Annotation:** Freehand drawing, text annotations, stamps, highlights, and sticky notes.
+- **11 domain-specific metadata editors:** COB, EPR, LCMS, LCNV, Lockbox, LPM, MU, OSGLI, ESC, GUL/GVUL, and Verizon/Walmart -- each with per-workflow metadata classes (e.g., `WalmartMetadata`, `VerizonMetadata`, `OSGLIMetadata`, `ESCMetadata`, `EPRMetadata`, `COBMetadata`).
+- **Case management UI:** Case diary, document listing, activities, and notes within the viewer.
+- **Quality Review (QR) processing** for multiple domains.
+- **SOAP integration:** Calls CMWSWeb facades via SOAP (`WorkflowFacade`, `CaseManagementFacade`, `LockboxFacade`, `ESCFacade`, etc.). ImageViewer does NOT call GIAL directly.
+
+**Document types** are workflow-specific. Lockbox alone has over 40 document types (payments, miscellaneous, census, bankruptcy, W-9, HIPAA-related types, NJEA types, dental types). Each document type is a `BigDecimal` code stored in metadata and used for routing, authorization, and reporting.
+
+---
+
+## Section 5: Case Management
+
+Many workflows organize related documents into **case folders**. A case folder is itself a special document type (e.g., `GULGVUL_FOLDER_DOC_TYPE = 27`, `ESC_CASE_FOLDER_DOC_TYPE = 8`, `CONVERSION_FOLDER_DOC_TYPE = 27`) stored in a case repository. Cases have statuses (New, Pending, QR Selected, Completed, etc.), types, and track child documents.
+
+**Case Listing** is available for LRK (workflow 1), Lockbox (2), LCNV (8), GUL/GVUL (9), ESC (10), MU (101), LCMS (102), and LCMS-ILI (107). Each has a dedicated case listing dialog accessible from the toolbar. Lockbox also has a separate NJEA Case Listing for New Jersey Education Association documents.
+
+**Customer File** is a cross-document view available in OSGLI (workflow 3) and COB/SM COB (workflows 11/12). In OSGLI, the Customer File search lets users find all documents related to a customer (by SSN or other identifiers) across active, inactive, correspondence, beneficiary, application, and premium payment tabs. In COB/SM COB, it is called "Client File" and provides a similar cross-document view for client on-boarding work types.
+
+**Case processing** involves `CaseManagementFacade` and `CMWSCaseManagementProcess`. When documents are added to a case (e.g., via `folderLetterDocument` in `PutLetter`), the case status automatically updates based on business rules defined in each domain's constants (e.g., `GulGvulConstants.getCaseStatusForCaseProcessing()`, `ESCConstants.getCaseStatusForCaseProcessing()`, `LcnvConstants.getCaseStatusForCaseProcessing()`).
+
+---
+
+## Section 6: Admin and User Management
+
+The Admin function (`showAdmin()` in `cmwsmain.jsp`) is available to users with the `canSeeAdmin` or `canAdminUpdt` privilege. It provides user management capabilities within each workflow:
+
+- **User creation and FBU assignment** -- Users are assigned to Functional Business Units (FBUs) within each workflow. FBUs control what queues a user can see and what actions they can perform. For example, OSGLI has FBUs for ODC Supervisor (7), Workflow Manager (4), and OSGLI Supervisor (6). COB has FBUs for Policy Change CSC (6), Case Install CSC NAO (9), and regional CSC FBUs for Middle Market West (7) and East (8).
+- **Privilege management** -- Privileges are string codes (e.g., `ASGN` for assign, `APRV` for approve, `UNASGN` for unassign, `LIST` for list all, `ANNOTREMOV` for annotation removal, `GTNXTINDXR` for get-next indexer, `EFTUPDT` for EFT update, `CHKUPDT` for check update, `ADDRAPRV` for address approval). Privileges are cached for 10 minutes per user per workflow in `AuthorizationService.privilegeCache`.
+- **Queue permissions** -- Three permission types: `QV` (queue view), `QF` (move from), `QT` (move to). Cached for 10 minutes in `AuthorizationService.authorizationCache`.
+
+**Control Admin** (`showCntrlAdmin()`) is specific to MU (workflow 101) and allows supervisors to manage control numbers and IDs used for document tracking.
+
+---
+
+## Section 7: IPR (Individual Processing Rate)
+
+IPR is CMWS's built-in performance management system. It tracks how much work each examiner processes per day and is available for workflows 1 (LRK), 2 (Lockbox), 3 (OSGLI), 7 (Walmart), 8 (LCNV), 9 (GUL/GVUL), 10 (ESC), and 13 (Verizon).
+
+IPR has four components:
+
+1. **User Process Rate** (`GetUserProcessRateAction`) -- Shows how many items a user processed on a given date, broken down by process factor. Supervisors can view any user's rates; regular users see their own. Each workflow has its own facade for calculating rates (e.g., `LPMFacade.getUserProcessRate()`, `OSGLIFacade.getUserProcessRate()`).
+
+2. **Work Hours** (`GetWorkHoursAction`, `SaveWorkHoursAction`) -- Tracks hours worked per day. Non-supervisors can only edit work hours within a configurable lookback window (8 days for LRK, 6 days for GUL/GVUL, 5 business days for Walmart and Verizon). The system checks business days via `WorkflowServiceFacade.isBusinessDay()` to handle weekends and holidays correctly.
+
+3. **Process Factors** (`GetUserProcessFactorAction`, `SaveUserProcessFactorAction`) -- Configurable weighting factors that determine how different types of work are counted. For example, processing a death claim might count as 3 units while processing a miscellaneous document counts as 1.
+
+4. **Manual Activities** (`GetManualActivityAction`, `NewManualActivityAction`, `SaveManualActivityAction`) -- Allows users to log non-queue activities (phone calls, meetings, training) that count toward their productivity.
+
+The OSGLI workflow has a "My Productivity" button (via `showProductivity()`) that opens a "Scorecard Report" (report ID 39) directly. For other workflows, IPR is accessed through the general Productivity button.
+
+---
+
+## Section 8: Quality Review and QR Sampling
+
+Quality Review is a configurable sampling system that randomly selects completed work items for supervisor review. It is available for workflows 1 (LRK), 2 (Lockbox), 3 (OSGLI), 7 (Walmart), 8 (LCNV), 9 (GUL/GVUL), 10 (ESC), 12 (SM COB), 13 (Verizon), and 14 (EPR).
+
+**QR Sampling Configuration** (`ViewQRSamplingAction`, `UpdateUserQRSamplingAction`) allows supervisors to set sampling rates. `QualityReviewFacade.getQRSampleInfo()` retrieves the current configuration. Rates can be set globally for a workflow or per user (`ViewUserQRSamplingAction`). OSGLI supports two sampling methods: `BYTOTAL` (sample a percentage of all completed items) and `BYTRANS` (sample a percentage of each transaction type).
+
+**QR Workflow:** When an item is selected for QR, it moves to the workflow's QR queue (e.g., `WALMART_QR_QUEUE`, `ESC_QR_QUEUE`, `OSGLI_QR_QUEUE`). A QR event is logged in workflow history (event code 17 across all workflows). The reviewer can Approve, Fail, Bypass, or mark as Fixed. Failed items move to a QR Fail queue where the original examiner must correct their work. QR statuses are tracked per workflow: Selected (1), Approve (2), Fail (3), Bypass (4), Fixed (5). OSGLI adds FIO (4), Review (5), and Revalidation Selected (6).
+
+**EPR's QR** is integrated into the task workflow: tasks named "Initiate quality review" and "Perform Quality Review" trigger QR selection. QR-selected and non-selected notifications are sent via email.
+
+---
+
+## Section 9: Records Administration and Legal Holds
+
+Records Administration manages document retention and destruction in compliance with legal and regulatory requirements. It is available to users with the `canSeeRecordsAdmin` or `canRecordsAdminUpdt` privilege. The Records Admin dialog (`showRecordsAdmin()`) is accessible from the toolbar for most workflows (excluded for workflows 4, 5, 6, 11, 12, 14, 104).
+
+**Key capabilities:**
+
+- **Record Series Management** (`AddRecordSeriesAction`, `DisplayRecordSeriesAction`, `UpdateRecordSeriesAction`) -- Define and maintain record series that specify retention periods for different document categories.
+- **Records Mapping** (`DisplayRecordsMapAction`, `UpdateRecordsMapAction`) -- Map document types to record series, controlling how long each type of document is retained.
+- **Hold Orders** (`AddHoldOrderAction`, `DisplayHoldOrderAction`, `UpdateHoldOrderAction`) -- Create legal holds that prevent destruction of documents matching certain criteria. `DisplayHoldOrderSSNAction` supports looking up hold orders by SSN.
+- **Records Management Queue** -- OSGLI and GUL/GVUL have dedicated records management queues: Destruction (where items awaiting destruction are queued), Hold Order (items under legal hold), and Research (items requiring investigation before destruction). The `RecordsManagementAction` manages the records management queue view (`RECORDSMGMTQUEUE` result type in `cmwsmain.jsp`).
+- **Destruction Processing** (`RMDestroyAction`) -- Handles the actual destruction approval. Items in the destruction queue can be approved for destruction, placed on hold, or sent to research.
+- **Retention Types** -- Both OSGLI and GUL/GVUL define three retention types: Current Year (1), Life (2), and Non-Life (3).
+
+When items are transferred between workflows, records management processing is triggered automatically for OSGLI (workflow 3) and GUL/GVUL (workflow 9) via `OSGLIRecordsAdminHelper` and `GulGvulRecordsAdminHelper` respectively.
+
+---
+
+## Section 10: SLA Management
+
+SLA (Service Level Agreement) management tracks processing deadlines for work items. It is controlled by two privileges: `hasSLARead` (view SLAs) and `hasSLAEdit` (modify SLAs). The SLA button appears in the toolbar when either privilege is granted.
+
+`SLAListAction` retrieves SLA definitions via `SLAFacade.getSLAList()`, which can be filtered by control number and form code or retrieved in full. `SLASaveAction` creates/updates SLA rules, `SLAViewAction` displays individual SLA details, and `SLADeleteAction` removes SLA rules.
+
+SLA data connects to the priority system -- items approaching or past their SLA deadline can be flagged for priority escalation.
+
+---
+
+## Section 11: Priority Management
+
+Priority management allows supervisors to manually set priority levels on work items. It is gated by the `canSetPriority` privilege. The Set Priority dialog (`showSetPriority()`) presents a list of items that can be reprioritized, managed by `SetPriorityListAction` and related actions in `com.pru.gi.workflow.web.actions.setpriority`.
+
+Priority affects queue ordering -- when examiners use "Get Next," higher-priority items are served first. This integrates with SLA management: items approaching SLA violation can be escalated in priority to ensure timely processing.
+
+---
+
+## Section 12: Reporting and Dashboards
+
+CMWS integrates with **Crystal Reports** for operational reporting. The Reports button (`showReports()`) is available to users with the `canSeeReports` privilege. Reports open in a separate browser window via the report manager (`/CMWS/workflow/reports/showReportManager.go`).
+
+**Key reporting components:**
+
+- **GetReport servlet** -- Serves Crystal Reports output.
+- **GetViewReport servlet** -- Serves Excel-format view reports accessible via the "Excel Report" toolbar button.
+- **GetDashboardReport servlet** -- Serves dashboard-specific report data.
+- **CMWSReports project** (`Project_Workspace/CMWSReports`) -- Contains the Crystal Reports templates and report definitions.
+
+**EPR Dashboard** (`showDashboard()`) is a specialized inflight dashboard for enrollment campaign management, available to EPR users with the `DASHBOARD` privilege. It renders an in-page dashboard (`epr/InflightDashboard.jsp`) rather than opening a separate window.
+
+**Web Tracker Reports** appear for workflows with `canSeeWTReports` and provide additional tracking reports specific to work-type request workflows (COB, EPR).
+
+**Productivity Reports** -- OSGLI has a direct "My Productivity" button that opens a specific report (Scorecard Report, ID 39) for the current user.
+
+---
+
+## Section 13: Letter Generation
+
+Letter generation is available for workflows that have letter storage configured (`_LTR` and `_LTRSTOR` beans): Walmart (7), LCNV (8), and ESC (10).
+
+The `PutLetter` servlet handles letter creation. When a letter is generated (typically from the ImageViewer's iLetters integration), the servlet:
+1. Creates a new document with the letter's document type (retrieved via `LetterServiceFacade.getLetterDocType()`)
+2. Copies relevant metadata from the parent case folder (SSN, state code, control number, country code, complaint number)
+3. Sets source type ("Conversion" for LCNV, "Feed" for others) and source date
+4. Folders the letter into the parent case via `CaseManagementFacade`
+5. For Walmart, logs a letter-creation workflow history event
+6. For LCNV with remote printing, determines the brochure type and adds the letter to a print queue
+
+Letter document classes are defined per workflow: ESC uses class 31, LCNV uses class 23, Walmart uses class 25.
+
+---
+
+## Section 14: Search
+
+Search is a cross-document capability available from the main toolbar for all workflows except DCMS Archive (103). The Search button opens a modal dialog (`/CMWS/workflow/search.go`) that allows users to search for documents within the current workflow by various metadata criteria.
+
+Search results display in the main content area with the `SEARCH` result type. Users can switch workflows during search -- if the search returns results from a different workflow, the permission set is refreshed.
+
+**Specialized searches:**
+- **Records View** (`showRecordsSearch()`) -- Available for most workflows except archives and COB/EPR. Searches the records management data and displays results in the `RECORDS` result type.
+- **Customer File Search** -- OSGLI (workflow 3) has `showOSGLICustomerFileSearch()` and COB/SM COB (workflows 11/12) have `showCOBClientFileSearch()`, both displaying results in the `CUSTOMER_FILE` result type.
+- **Worktype Request Search** -- COB/SM COB (workflows 11/12) have `showRequestTypeSearch()` for searching work-type requests, displaying results in the `WORKTYPE_REQUEST_SEARCH` result type.
+- **EAS Search** -- EPR (workflow 14) has `showEASSearch()` for searching enrollment admin system records, displaying results in the `EAS_REQUEST_SEARCH` result type.
+
+---
+
+## Section 15: Security and Access Control
+
+CMWS security operates at multiple layers:
+
+**Layer 1: WebSEAL/TAM SSO.** IBM Tivoli Access Manager (TAM) handles authentication. The `WEBSEALFilter` servlet filter reads the `iv-user` HTTP header injected by the WebSEAL reverse proxy and sets it as a ThreadLocal on `FacadeBase`. This user ID is the identity for all subsequent authorization checks. Users without a valid WebSEAL header cannot access the system.
+
+**Layer 2: Workflow Authorization.** `AuthorizationService.getAuthorizedWorkflows()` queries TAM for which workflow object spaces a user can access. The TAM keys follow the pattern `/Prudential/InsDiv/GI/CMWS/Workflows/{WorkflowName}` with `[Pru]X` (execute) permission. Users only see workflows they are authorized for. Special rule: OSGLI access automatically grants OSGLI Archive access.
+
+**Layer 3: Control Number Authorization.** TAM keys under `/Prudential/InsDiv/GI/CMWS/ControlNumbers/{workflowId}/{controlNumber}` restrict which control numbers (client identifiers) a user can access. Checked with `[Pru]R` (read) or `[Pru]U` (update) permissions.
+
+**Layer 4: Document Type Authorization.** TAM keys under `/Prudential/InsDiv/GI/CMWS/DocTypes/{workflowId}/{documentTypeCd}` restrict access to specific document types. Returns `READONLY` or `UPDATE` access level.
+
+**Layer 5: Queue Permissions.** Database-backed permissions checked via `usp_WF_CheckQueuePermission`. Three types: QV (view), QF (move from), QT (move to). Cached for 10 minutes per user/workflow/queue/permission combination.
+
+**Layer 6: Privilege-Based UI.** The `cmwsmain.jsp` page uses 25+ hidden form fields to cache the user's permission state: `canApprove`, `canAssign`, `canUnreserve`, `canUnassign`, `canSeeQRRate`, `canSeeReports`, `canSeeAdmin`, `canAdminUpdt`, `canSeeRecordsAdmin`, `canRecordsAdminUpdt`, `canSetPriority`, `hasSLARead`, `hasSLAEdit`, `canSeeIDoc`, `hasWTREQ`, `hasWTUPDATE`, `hasCaseRead`, `hasNJEACaseRead`, `isNJEAUser`, and others. These control which toolbar buttons appear and which actions are available.
+
+---
+
+## Section 16: External Integrations and Notifications
+
+**GIAL (General Image and Artifact Loading)** -- The `Project_Workspace/GIAL` project is a **separate WAR** (`gial.war`) deployed at the `/GIAL` context path. It is a batch document ingestion pipeline -- not an abstraction layer that CMWSWeb calls. The relationship is reversed: **GIAL calls CMWSWeb**. The flow is: `Scanner/Batch System -> GIAL (transform + validate) -> CMWSWeb (store + enqueue) -> EDM/Filenet`. Specifically, GIAL accepts XML batch files from scanning systems, validates them against a BatchControl database, transforms images (e.g., PDF to TIFF), and then calls CMWSWeb via HTTP POST to `/CMWS/Workflow/PutDocument` (to store documents), SOAP to `MetadataServiceFacade` (to update metadata), and SOAP to `WorkflowServiceFacade` (to enqueue documents into workflow queues). `GIALImageLoader` is the entry point, with workflow-specific loaders: `DefaultLoader` for general workflows, `LcmsLoader` for LCMS, `MuLoader` for Medical Underwriting, and `OSGLILoader` for OSGLI. GIAL has its own parallel copy of 22 EDM classes -- this EDM integration is not shared with CMWSWeb. The `EdmService`/`EdmServiceImpl` classes in CMWSWeb's `com.pru.gi.workflow.edm` package handle CMWSWeb's own EDM communication with Filenet. Previously, GIAL connected through Helix middleware to Documentum -- this is the migration being completed on the current branch.
+
+**Notification Events** -- `NotificationEventConstants` defines an event-driven automation system. Events can trigger pre-actions like adding workflow history (`PRE_ACTION_ADD_WORKFLOW_HISTORY`) and updating metadata (`PRE_ACTION_UPDATE_METADATA`). The system supports configurable parameters including CMWS workflow event codes, history event data, operator assignment, expected return dates, pending queue routing, case status changes, and document type coding. This powers the "Imaging Pipeline - Workflow Automation" feature added in 2015.
+
+**iDoc Manager** -- Available for workflows with the `canSeeIDoc` privilege. Opens an external iDoc Manager application for managing indexed documents.
+
+**Email Notifications** -- COB and EPR have extensive email notification systems. COB sends notifications for control number requests, work type creation, milestone completion, overdue items, new document versions, and various queue transitions. EPR sends notifications for initial activation, assignment, task changes, reminders, at-risk alerts, past-due alerts, cancellation, and QR selection/non-selection.
+
+**Link2GI** -- An external access path for the Underwriting Archive (workflow 5) that allows external systems to retrieve documents via Filenet (formerly Documentum). Uses a separate TAM key (`/Prudential/InsDiv/GI/CMWS/ES/Link2GI`) for authorization.
+
+**External SOAP Integrations (`com.prudential` package)** -- The `com.prudential` package contains 200+ JAX-WS generated classes (produced by `wsimport` from WSDLs) that integrate with three external systems:
+1. **MU Application Coverage** -- SOAP service for Medical Underwriting coverage verification when processing Evidence of Insurability applications.
+2. **GIQTS Feed Handler** -- Outbound feed to the Group Insurance Quality Tracking System.
+3. **GIQTS Response Feed Handler** -- Inbound polling for QTS response data.
+
+**WLMS (Workflow/Lifecycle Management Services)** -- WLMS is both a client and a server within CMWS. It exposes 20 SOAP facades backed by 30 WSDLs. WLMS manages workflow lifecycle operations including queue management, work item routing, and assignment. It is a library (`gi-wlms-client` in the migration target), not a standalone deployable service.
+
+**MediConnect** -- Integration for medical document images, used in conjunction with Medical Underwriting workflows for retrieving and storing medical records and EOI documents.
+
+**QTS Feed Handlers** -- Referenced in the codebase for handling Quality Tracking System data feeds, particularly for EPR's QR process ("Perform Quality Review and send QTS sheet"). GIQTS outbound feeds and inbound polling are handled via the JAX-WS generated classes in `com.prudential`.
+
+---
+
+## Section 17: Health Monitoring
+
+The `HealthCheck` servlet (`/CMWS/HealthCheck`) provides a simple HTTP health endpoint. It runs on `GET` requests and returns an HTML page with the system's main status and detail status entries.
+
+`HealthCheckThread` is a background monitoring thread that periodically checks system health (database connectivity, service engine availability) and maintains a status map. The main status and detail status map are accessible as static fields, allowing the `HealthCheck` servlet to report current health without blocking on real-time checks.
+
+The health check was designed to be called by load balancers and monitoring systems to determine if the CMWS instance is operational.
+
+---
+
+## Section 18: Build and Deployment Model
+
+**Build system:** Ant + Ivy, orchestrated from `CMWSEAR/build/build.xml`. There is zero compile-time dependency between the sub-projects -- all integration is at runtime via HTTP and SOAP.
+
+**Deployment artifacts:**
+- **`cmws.ear`** -- Produced by the CMWSEAR project, containing:
+  - `CMWS.war` -- The main CMWSWeb application. ImageViewer JARs are copied into `CMWS.war` at build time (packed and signed JARs for the browser applet).
+  - `gial.war` -- The GIAL batch ingestion pipeline, deployed at `/GIAL` context.
+- **CMWSReports** -- 347 Crystal Reports templates, deployed separately to a Business Objects BI server (not within the EAR).
+
+**Key deployment characteristics:**
+- All sub-projects communicate at runtime only -- zero compile-time dependencies.
+- GIAL calls CMWSWeb via HTTP/SOAP; ImageViewer calls CMWSWeb via SOAP.
+- CMWSWeb calls EDM via REST; GIAL has its own parallel EDM integration.
+- CMWSReports are served by the BI server and accessed via URLs from the CMWS UI.
+
+---
+
+## Summary Table
+
+| Capability | Who Uses It | Key Code Location | Related Workflows |
+|---|---|---|---|
+| Queue Management | All users | `com.pru.gi.workflow.queues.*` | All active workflows |
+| Auto-Assignment | System (automated) | `com.pru.gi.{domain}.queue.*AutoAssign` | All except archives |
+| Document Storage | All users, external systems | `com.pru.gi.workflow.facade.DocumentStorageFacade` | All |
+| Document Ingestion (GIAL) | Scanners, batch systems | `Project_Workspace/GIAL` (`gial.war`) -- calls CMWSWeb | All active workflows |
+| Image Viewing + Annotation | Examiners, reviewers | `Project_Workspace/ImageViewer` (253-file Swing applet) | All active workflows |
+| Case Management | Examiners, supervisors | `com.pru.gi.workflow.facade.CaseManagementFacade` | OSGLI, GUL/GVUL, ESC, LCNV, Walmart, COB, EPR |
+| Customer/Client File | Examiners | `com.pru.gi.workflow.web.actions.customerfile.*` | OSGLI (3), COB (11), SM COB (12) |
+| Case Listing | Examiners, supervisors | `com.pru.gi.{domain}.caselist.*` | LRK, Lockbox, LCNV, GUL/GVUL, ESC, MU, LCMS |
+| Cross-Workflow Transfer | System, examiners | `com.pru.gi.workflow.queues.TransferHelper` | All active (esp. Walmart, Verizon) |
+| Admin / User Mgmt | Supervisors, admins | `com.pru.gi.workflow.web.actions.admin.*` | All active workflows |
+| IPR / Productivity | All users, supervisors | `com.pru.gi.workflow.web.actions.ipr.*` | LRK, Lockbox, OSGLI, Walmart, LCNV, GUL/GVUL, ESC, Verizon |
+| Quality Review | Supervisors, reviewers | `com.pru.gi.workflow.web.actions.qrsampling.*` | LRK, Lockbox, OSGLI, Walmart, LCNV, GUL/GVUL, ESC, SM COB, Verizon, EPR |
+| Records Admin | Records admins | `com.pru.gi.workflow.web.actions.recordsadmin.*` | Most active workflows |
+| SLA Management | Supervisors | `com.pru.gi.workflow.web.actions.sla.*` | Configurable per workflow |
+| Priority Management | Supervisors | `com.pru.gi.workflow.web.actions.setpriority.*` | Configurable per workflow |
+| Reporting | Supervisors, managers | `com.pru.gi.workflow.web.actions.reports.*`, `CMWSReports` | All active workflows |
+| Letter Generation | Examiners | `com.pru.gi.workflow.servlets.PutLetter` | Walmart (7), LCNV (8), ESC (10) |
+| Search | All users | `WebContent/Workflow/search/` | All except DCMS Archive |
+| Security / SSO | All users (transparent) | `AuthorizationService`, `WEBSEALFilter` | All |
+| Notifications | System (automated) | `NotificationEventConstants` | LPM, COB, GUL/GVUL, LCNV, OSGLI, Verizon, Lockbox, ESC, Walmart |
+| External SOAP (WLMS, GIQTS, MU) | System, automated feeds | `com.prudential.*` (200+ JAX-WS classes), WLMS (20 facades) | MU, EPR, various |
+| Build / Deployment | DevOps | `CMWSEAR/build/build.xml` (Ant + Ivy) | System-wide |
+| Health Monitoring | Operations / load balancers | `com.pru.gi.workflow.servlets.HealthCheck` | System-wide |
+
+---
+
+## Where to Go Next
+
+Now that you understand what CMWS does functionally, continue with the technical onboarding documents:
+
+- **[01-architecture-overview.md](01-architecture-overview.md)** -- System architecture, technology stack, deployment topology
+- **[02-domain-modules.md](02-domain-modules.md)** -- Deep dive into each domain package and its internal structure
+- **[03-workflow-and-gial.md](03-workflow-and-gial.md)** -- Workflow engine internals and the GIAL imaging pipeline
+- **[04-migration-mapping.md](04-migration-mapping.md)** -- How the legacy system maps to the new architecture
+- **[05-diagrams.md](05-diagrams.md)** -- Visual architecture and data flow diagrams
+- **[06-developer-guide.md](06-developer-guide.md)** -- Development environment setup and coding conventions

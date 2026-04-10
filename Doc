@@ -311,7 +311,12 @@ If you want, I can next convert this into a short 2–3 minute verbal explanatio
 What Spring Boot is expected to do
 From the design you shared earlier, Spring Boot is not the workflow engine itself. Its role is to extract workflow changes from CMWS, normalize them into a common event format, validate them, and pass them downstream to NiFi / messaging / ELK. Since CMWS stores state in Oracle and uses workflow history tables, Spring Boot will most likely read incremental DB changes or related APIs, convert them into standardized events, and publish them onward.
 
-
+What a Queue Means Here
+A queue represents the current state of a work item
+It indicates:
+Where the item is in the process
+Who is responsible for it
+What action is pending
 
 
 

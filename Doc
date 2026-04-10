@@ -306,3 +306,9 @@ Are there any constraints on batch size or latency expectations for near real-ti
 ---
 
 If you want, I can next convert this into a short 2–3 minute verbal explanation for your client discussion.
+
+
+
+
+Workflow means the lifecycle of a work item in CMWS. A work item can be a document, claim, case, or request, and it moves through different states like queue, assignment, review, pending, approval, and completion. In CMWS, each business area has its own workflow instance, queues, and rules, so workflow is basically the process that controls how an item moves from one stage to another.
+Event means any meaningful change in that workflow. The docs show that CMWS internally fires workflow events such as enqueue, move, reserve, assign, get-next, and inbox/queue retrieval. These are not just logs; they represent real state transitions in the workflow. For example, when an item is moved from one queue to another, or reserved by a user, that is an event. The database also records these changes in workflow history tables, so the DB becomes the source of truth for event reconstruction.

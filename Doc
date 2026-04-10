@@ -1,0 +1,308 @@
+Here is a clean, professional, point-wise summary you can share with your manager:
+
+
+---
+
+1. Definitions
+
+Workflow
+
+A workflow represents the lifecycle of a work item (such as a document or case) as it progresses through different states (queues) from creation to completion. It defines the sequence of steps, transitions, assignments, and processing rules.
+
+Event
+
+An event is any meaningful change or action within a workflow. It captures state transitions such as queue movement, assignment, status updates, task completion, or document updates.
+Technically, each event can be represented with attributes like document_id, event_type, timestamp, user_id, and workflow_id.
+
+
+---
+
+2. Types of Events to Capture
+
+Based on system understanding and database structure, events will primarily be derived from the following:
+
+Core Event Source
+
+WORKFLOW_HISTORY
+
+Contains all workflow lifecycle events such as move, reserve, complete, return
+
+Includes document_id, event_type, user_id, timestamp
+
+Serves as the primary event log and main source for extraction
+
+
+Supporting Tables
+
+DOCUMENT_QUEUE
+
+Provides current state of the document (queue and owner)
+
+Useful for identifying real-time status and idle/stuck items
+
+
+CASE_DIARY
+
+Contains user notes and decisions
+
+Useful for contextual enrichment, not primary event source
+
+
+COB_WT_TASK / EPR_WT_TASK
+
+Capture task-level events and milestones within workflows
+
+
+QR_SELECTED_DOCS
+
+Tracks quality review-related events
+
+
+Domain-specific tables
+
+Provide detailed subprocess-level events depending on business unit
+
+
+
+---
+
+3. Event Identification Strategy
+
+There is no finalized or predefined list of events
+
+Initial approach is to capture a broad set of events from available sources
+
+Events will be analyzed post-extraction to determine relevance
+
+Low-value or redundant events will be filtered iteratively
+
+Final event model will evolve based on platform capabilities and data availability
+
+
+
+---
+
+4. Event Extraction Approach (CDC)
+
+Rationale
+
+CMWS is a database-driven system with heavy reliance on stored procedures
+
+Limited or no reliable event APIs
+
+Database-level extraction is the most accurate and scalable approach
+
+
+Approach
+
+Use Change Data Capture (CDC) to track incremental changes in database tables
+
+Focus primarily on WORKFLOW_HISTORY as the main event source
+
+
+Flow
+
+Oracle Database (CMWS)
+
+CDC mechanism captures inserts/updates
+
+Spring Boot application consumes changes
+
+Data is transformed, validated, and enriched
+
+Events are pushed to ELK via producer services
+
+
+Key Consideration
+
+Secure database access via service account is required
+
+Need to confirm database-level access controls and CDC feasibility
+
+
+
+---
+
+5. Real-Time vs Near Real-Time Processing
+
+The system operates in near real-time rather than strict real-time
+
+Events are processed in small batches (typically within a few minutes, e.g., up to 5 minutes)
+
+
+Key Requirement
+
+Event timestamp must reflect the actual time of occurrence in the source system
+
+Not the ingestion or processing time
+
+
+Consideration
+
+Late-arriving events should be handled to maintain correct ordering in ELK
+
+
+
+---
+
+6. Existing Implementation and Reusability
+
+Existing integrations for CPM and CMDB are already implemented
+
+Current implementation is batch-based
+
+
+Reusability
+
+Existing Spring Boot consumer and producer components can be reused
+
+These can act as a baseline or fallback
+
+
+Improvement Direction
+
+Move toward near real-time or event-driven architecture where feasible
+
+
+
+---
+
+7. Transformation and Enrichment Strategy
+
+Enrichment and transformation are not restricted to a single layer
+
+
+Options
+
+Perform transformation within Spring Boot services
+
+Use a separate enrichment service if required
+
+Use NiFi for enrichment where applicable
+
+
+Approach
+
+Keep logic flexible and modular
+
+Avoid overloading a single component
+
+
+
+---
+
+8. Schema and Validation
+
+No predefined schema exists for events currently
+
+
+Requirements
+
+Define event structure and data types
+
+Design schema evolution strategy
+
+
+Risk
+
+Invalid data may lead to processing failures (poison pill scenarios)
+
+
+Mitigation
+
+Schema validation
+
+Error handling mechanisms
+
+Dead-letter queue or fallback strategy
+
+
+
+---
+
+9. PII Handling
+
+Amplify (ServiceNow)
+
+Does not contain PII
+
+Primarily ticketing data
+
+
+CMWS
+
+Contains sensitive information such as email, date of birth, and documents
+
+
+Approach
+
+Identify PII fields explicitly
+
+Apply masking or filtering at the earliest stage (preferably in Spring Boot layer)
+
+Ensure no sensitive data is passed downstream unprotected
+
+
+
+---
+
+10. Integration and Authentication
+
+Amplify
+
+Uses OAuth-based authentication
+
+API-driven integration
+
+
+CMWS
+
+Integration primarily through database (CDC)
+
+SOAP/XML-based workflows exist but are not preferred for event extraction
+
+Access via service account
+
+
+
+---
+
+11. End-to-End Flow
+
+CMWS database generates workflow changes
+
+CDC captures incremental updates
+
+Spring Boot consumes and processes events
+
+Data is transformed, validated, and masked
+
+Optional enrichment via NiFi or other services
+
+Processed events are pushed to ELK
+
+ELK stores and indexes events for analytics and reporting
+
+
+
+---
+
+12. Key Open Questions
+
+Are there any database-level access restrictions for CDC implementation?
+
+What is the preferred CDC tool or approach?
+
+Do we need to handle late-arriving events explicitly in ELK?
+
+Which fields in CMWS data should be classified as PII?
+
+What is the expected event schema or should it be designed collaboratively?
+
+Are there any constraints on batch size or latency expectations for near real-time processing?
+
+
+
+---
+
+If you want, I can next convert this into a short 2–3 minute verbal explanation for your client discussion.

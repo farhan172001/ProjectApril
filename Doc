@@ -308,6 +308,17 @@ Are there any constraints on batch size or latency expectations for near real-ti
 If you want, I can next convert this into a short 2–3 minute verbal explanation for your client discussion.
 
 
+What Spring Boot is expected to do
+From the design you shared earlier, Spring Boot is not the workflow engine itself. Its role is to extract workflow changes from CMWS, normalize them into a common event format, validate them, and pass them downstream to NiFi / messaging / ELK. Since CMWS stores state in Oracle and uses workflow history tables, Spring Boot will most likely read incremental DB changes or related APIs, convert them into standardized events, and publish them onward.
+
+
+
+
+
+
+
+
+
 
 
 Workflow means the lifecycle of a work item in CMWS. A work item can be a document, claim, case, or request, and it moves through different states like queue, assignment, review, pending, approval, and completion. In CMWS, each business area has its own workflow instance, queues, and rules, so workflow is basically the process that controls how an item moves from one stage to another.

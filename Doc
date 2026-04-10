@@ -315,6 +315,32 @@ From the design you shared earlier, Spring Boot is not the workflow engine itsel
 
 
 
+How Queue Works in CMWS
+Every document or case is always in one queue at a time
+Movement between queues = workflow progression
+Each move generates an event (captured in WORKFLOW_HISTORY)
+Examples of Queues
+Intake / Auto-Assign Queue → initial entry
+Active Queue → being processed
+Pending Queue → waiting for external input
+Approval Queue → awaiting approval
+Completed Queue → work finished
+Exception Queue → issues requiring manual intervention
+Technical Understanding
+Queue data is stored in DOCUMENT_QUEUE table
+Current queue
+Assigned user
+Queue transitions are recorded in WORKFLOW_HISTORY
+
+
+
+
+
+
+
+
+
+
 
 
 

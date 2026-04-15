@@ -1,0 +1,339 @@
+Here is a clean, professional, and structured document focused only on the ELK component of your project. You can directly use or adapt this.
+
+
+---
+
+ELK Component – Design and Role in Workflow Event Processing
+
+
+---
+
+1. Overview
+
+The ELK stack (Elasticsearch, Logstash, Kibana) is used as the centralized platform for storing, indexing, and analyzing workflow events collected from multiple source systems such as CMWS and Amplify.
+
+It enables:
+
+Consolidation of workflow data
+
+Near real-time visibility
+
+Advanced search and analytics
+
+Dashboard-based monitoring
+
+
+
+---
+
+2. Purpose of ELK in the Architecture
+
+The primary objectives of using ELK are:
+
+To act as a single source of truth for workflow events
+
+To provide searchable and indexed storage of event data
+
+To enable analytics and visualization of workflow processes
+
+To support downstream systems (e.g., CPM dashboards) via APIs
+
+
+
+---
+
+3. Components of ELK
+
+3.1 Elasticsearch
+
+Core storage and indexing engine
+
+Stores events as documents
+
+Supports fast querying and filtering
+
+Uses time-based indices for efficient data management
+
+
+3.2 Logstash
+
+Data ingestion and processing pipeline
+
+Handles:
+
+Parsing
+
+Transformation
+
+Data masking (where applicable)
+
+
+Prepares data before indexing into Elasticsearch
+
+
+3.3 Kibana
+
+Visualization and dashboard layer
+
+Enables:
+
+Real-time monitoring
+
+Workflow analytics
+
+Trend analysis
+
+
+
+
+---
+
+4. Role of ELK in the End-to-End Flow
+
+ELK sits at the final stage of the pipeline and performs the following:
+
+1. Receives processed events from upstream systems (Spring Boot / NiFi / messaging layer)
+
+
+2. Applies ingestion pipelines (via Logstash or ingest nodes)
+
+
+3. Indexes events into Elasticsearch
+
+
+4. Makes data available for querying and visualization through Kibana
+
+
+5. Exposes data for downstream consumption (e.g., CPM UI)
+
+
+
+
+---
+
+5. Data Flow into ELK
+
+Input Sources
+
+Spring Boot applications (event processing layer)
+
+NiFi (enrichment and routing layer)
+
+Messaging systems (MQ/SQS/Kafka) – if used
+
+
+Flow
+
+Events are generated and standardized upstream
+
+Events are pushed to ELK ingestion layer
+
+Data is processed and indexed
+
+Indexed data becomes available for search and analytics
+
+
+
+---
+
+6. Data Structure and Indexing Strategy
+
+Event Structure (Expected)
+
+Each event indexed in Elasticsearch should include:
+
+document_id
+
+workflow_id / workflow_name
+
+event_type
+
+event_timestamp (source system time)
+
+ingestion_timestamp
+
+user_id
+
+queue (if applicable)
+
+additional metadata (enriched fields)
+
+
+Indexing Strategy
+
+Time-based indices (e.g., daily or weekly indices)
+
+Index naming convention to be standardized
+
+Support for high-volume ingestion and efficient querying
+
+
+
+---
+
+7. Event Time vs Ingestion Time
+
+A key requirement is to maintain:
+
+Event Time: Actual time when the event occurred in the source system
+
+Ingestion Time: Time when the event is processed and stored in ELK
+
+
+ELK should prioritize event time for:
+
+Accurate sequencing
+
+Correct analytics
+
+Reliable reporting
+
+
+
+---
+
+8. Data Masking and Governance
+
+ELK includes a data masking pipeline for sensitive data
+
+However, primary masking should be performed upstream (Spring Boot layer)
+
+
+Requirements:
+
+Identify PII fields (e.g., email, date of birth)
+
+Ensure masked or filtered data is indexed
+
+Comply with data governance and security policies
+
+
+
+---
+
+9. Querying and Search Capabilities
+
+Elasticsearch enables:
+
+Search by document_id
+
+Filtering by workflow, event_type, queue
+
+Time-range queries
+
+Aggregations for analytics
+
+
+This supports:
+
+Debugging
+
+Audit trails
+
+Process tracking
+
+
+
+---
+
+10. Visualization and Analytics (Kibana)
+
+Kibana dashboards provide:
+
+Workflow status monitoring
+
+Queue-level insights
+
+Processing time analysis
+
+Event trends over time
+
+
+These dashboards enable:
+
+Operational visibility
+
+Business reporting
+
+Performance optimization
+
+
+
+---
+
+11. Performance and Scalability
+
+ELK is designed to handle:
+
+High event volumes
+
+Continuous ingestion
+
+Scalable storage
+
+
+Considerations:
+
+Index lifecycle management (ILM)
+
+Retention policies
+
+Query performance optimization
+
+
+
+---
+
+12. Integration with Downstream Systems
+
+ELK acts as a data source for downstream systems, such as:
+
+CPM (Salesforce UI dashboards)
+
+Reporting tools
+
+Monitoring systems
+
+
+Data can be accessed via:
+
+APIs
+
+Queries
+
+Dashboards
+
+
+
+---
+
+13. Key Design Considerations
+
+Ensure standardized event format before ingestion
+
+Maintain consistency across multiple source systems
+
+Handle late-arriving events correctly
+
+Define clear indexing and retention strategy
+
+Ensure PII compliance and data security
+
+
+
+---
+
+14. Summary
+
+The ELK stack serves as the central analytics and storage layer in the architecture, enabling consolidation, search, visualization, and analysis of workflow events from multiple systems.
+
+It transforms raw event data into actionable insights, supporting both operational monitoring and business decision-making.
+
+
+---
+
+If you want, I can:
+
+Convert this into a 1-page concise version
+
+Or add a sample ELK index + JSON event schema for your document

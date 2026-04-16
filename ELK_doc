@@ -440,3 +440,27 @@ Schema name (e.g., LRKPROD, COBPROD) to distinguish workflows across 21 schemas
 additional context fields (if available)
 queue name (from DOCUMENT_QUEUE or event_data1)
 response status / time (from access logs)
+
+
+
+
+
+
+Indexing Strategy
+1. Multi-Layer Index Design
+To support flexibility and performance, the following index structure is recommended:
+Raw Indices
+cmws-cdc-events-* (database change events)
+cmws-access-logs-* (user interaction logs)
+Processed / Unified Index (Primary)
+cmws-process-events-*
+This index contains normalized and correlated events used for:
+Analytics
+Dashboards
+Process mining
+2. Time-Based Indexing
+Use time-series indices (e.g., daily indices)
+Enables:
+Efficient querying
+Faster indexing
+Easy archival and retention

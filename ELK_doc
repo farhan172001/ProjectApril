@@ -337,3 +337,106 @@ If you want, I can:
 Convert this into a 1-page concise version
 
 Or add a sample ELK index + JSON event schema for your document
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12. Integration with Downstream Systems
+ELK serves as the centralized event store and analytics layer, enabling multiple downstream systems to consume standardized workflow event data.
+Downstream Consumers
+CPM (Salesforce UI Dashboards)
+Provides consolidated workflow visibility and near real-time updates to business users.
+UiPath Process Mining
+Consumes normalized event data to reconstruct end-to-end workflows, identify process variants, bottlenecks, and automation opportunities.
+Reporting and Analytics Tools
+Used for generating operational and business reports based on workflow performance and trends.
+Monitoring and Observability Systems
+Enables tracking of system behavior, user activity, and error patterns across workflows.
+Data Access Patterns
+Downstream systems can access data from ELK through:
+APIs
+For real-time or near real-time integration with applications such as CPM.
+Direct Queries (Elasticsearch DSL / SQL)
+For advanced analytics, ad-hoc exploration, and integration with external tools.
+Kibana Dashboards
+For visualization, monitoring, and business-level insights.
+
+
+
+
+
+20. Support for Historical + Real-Time Data
+ELK must support both:
+1. Historical Backfill
+Data extracted using SQL (WORKFLOW_HISTORY)
+Loaded into ELK
+2. Real-Time Events
+CDC streaming
+Access log ingestion
+
+
+
+
+
+
+
+18. Event Correlation Strategy
+Since events come from multiple sources, ELK relies on correlation logic.
+Correlation Keys
+document_id (case_id)
+user_id
+timestamp
+How It Works
+Same action appears in:
+Access log (user action)
+CDC (system update)
+Events are matched using:
+Same document
+Same user
+Time proximity
+Outcome
+ELK stores a complete timeline of events per document.
+
+
+
+
+
+
+
+
+
+6. Data Structure and Indexing Strategy
+Event Structure (Standardized)
+Events indexed in Elasticsearch should follow a process-mining-ready structure, derived from CDC data and WebSphere access logs.
+Each event should include:
+case_id (document_id)
+Primary identifier used to group all events related to a document
+activity (event_type)
+Derived from:
+workflow_event_cd + event_data1 (CDC – WORKFLOW_HISTORY)
+URL patterns (access logs, e.g., /workflow/move.go)
+timestamp (event_time)
+Actual time when the event occurred in the source system (database or HTTP request time)
+resource (user_id)
+From CDC (e.g., user_ions_id, modified_by)
+From access logs (iv-user header)
+source
+Indicates origin of event:
+CDC (database changes)
+access_log (user actions)
+workflow/schema
+Schema name (e.g., LRKPROD, COBPROD) to distinguish workflows across 21 schemas
+additional context fields (if available)
+queue name (from DOCUMENT_QUEUE or event_data1)
+response status / time (from access logs)

@@ -1,1 +1,1210 @@
 
+Below is a simple, structured view of how the ELK part works according to the two documents.
+
+1. Overall ELK flow
+
+The documents show two input paths into Elasticsearch:
+
+1. Database events from CMWS through CDC
+
+
+2. Raw WebSphere access logs through Filebeat
+
+
+
+NiFi sits in the middle for normalization and enrichment, and Elasticsearch stores both raw log data and the final process-mining-ready events. The final data is then used by UiPath Process Mining.
+
+
+---
+
+2. Flow for access logs
+
+Step 1: WebSphere creates raw access logs
+
+WebSphere logs every HTTP request, including the URL path, user identity, response code, response time, and query parameters such as document ID. The document specifically says these logs are available without changing application code. 
+
+Step 2: Filebeat reads the raw logs
+
+Filebeat is configured to read the WebSphere access log file. The document example uses a path like /var/log/websphere/cmws_access.log. 
+
+Step 3: Filebeat parses the log line
+
+The document shows Filebeat using:
+
+dissect to split the raw log line into fields
+
+a script processor to map URL paths into business actions like Get Next Item, Move Item, Approve Item, View Document, and Generate Letter
+
+extraction of document_id from query parameters like docId=12345 
+
+
+Step 4: Filebeat sends data to Elasticsearch
+
+The document shows Filebeat writing access logs to a daily index with a pattern like:
+
+cmws-access-logs-%{+yyyy.MM.dd} 
+
+So, raw access logs go to Elasticsearch first, and they are stored as time-based daily indices.
+
+
+---
+
+3. Flow for database events
+
+Step 1: Oracle database changes
+
+CMWS writes workflow actions into Oracle through stored procedures. The CDC document says the database is effectively the event log, especially through tables like WORKFLOW_HISTORY and DOCUMENT_QUEUE. 
+
+Step 2: CDC captures INSERT/UPDATE/DELETE
+
+The CDC options mentioned are GoldenGate, LogMiner, and Debezium. The target architecture shown in the document is:
+
+Oracle DB → CDC → Kafka Topics → NiFi / Kafka Connect → Elasticsearch 
+
+Step 3: NiFi normalizes the CDC data
+
+The CDC document says the main process-mining fields are:
+
+case_id
+
+activity
+
+timestamp
+
+resource 
+
+
+The document also says WORKFLOW_HISTORY is the gold mine and should be the primary event source in phase 1. 
+
+Step 4: NiFi writes normalized events to Elasticsearch
+
+The zero-code document shows the CDC flow as:
+
+Oracle CDC → NiFi → Elasticsearch
+
+and the destination is a unified process-event index, shown as cmws-process-events. 
+
+
+---
+
+4. NiFi flow in simple words
+
+NiFi is doing the cleaning and standardization work.
+
+For CDC data
+
+NiFi:
+
+receives database change events
+
+identifies the source table
+
+extracts the important fields
+
+converts them into the standard process-event format
+
+writes them to Elasticsearch as process events
+
+
+For access logs
+
+NiFi:
+
+reads the raw access-log data from Elasticsearch
+
+extracts fields like uri_stem, uri_query, iv_user
+
+maps the URL to a business action
+
+extracts document_id
+
+writes the normalized record into the process-event index 
+
+
+
+---
+
+5. Simple configuration view
+
+A. Filebeat configuration
+
+The document shows Filebeat configured to:
+
+read the WebSphere access log file
+
+parse the log line
+
+extract action and document ID
+
+send to Elasticsearch daily indices 
+
+
+In simple terms:
+
+Input: raw WebSphere logs
+
+Output: cmws-access-logs-YYYY.MM.DD
+
+
+
+---
+
+B. NiFi configuration for CDC
+
+The CDC document shows NiFi receiving CDC data and transforming it into a process-mining event log. The key idea is:
+
+source: Oracle CDC
+
+transformation: table-wise extraction and field mapping
+
+output: Elasticsearch process-event index
+
+
+In simple terms:
+
+Input: Oracle changes from WORKFLOW_HISTORY, DOCUMENT_QUEUE, etc.
+
+Output: standardized event rows
+
+
+
+---
+
+C. NiFi configuration for log correlation
+
+The zero-code document says the two data sources correlate naturally through:
+
+document ID
+
+user ID
+
+timestamps 
+
+
+So NiFi can combine:
+
+access-log action from Filebeat
+
+DB event from CDC
+
+
+into one process event timeline.
+
+
+---
+
+6. What ELK finally stores
+
+According to the documents, Elasticsearch finally stores normalized events that look like process-mining records, not just raw logs. The important fields are:
+
+case_id
+
+activity
+
+timestamp
+
+resource
+
+source
+
+schema
+
+source detail if needed
+
+
+The access logs are also stored in a separate daily raw-log index, which is useful for tracing and troubleshooting. 
+
+
+---
+
+7. Failure scenarios to mention in your document
+
+Filebeat failure
+
+If Filebeat cannot read the access log or parse the line correctly, then action mapping and document ID extraction will fail. The document’s Filebeat flow depends on the raw log format being readable. 
+
+CDC failure
+
+If CDC does not capture a database change, the workflow event will not appear in the process event stream. The CDC document says WORKFLOW_HISTORY is the primary source of truth, so missing CDC means missing workflow visibility. 
+
+NiFi failure
+
+If NiFi fails while transforming or enriching the data, the event may not be written to Elasticsearch. Since NiFi is the normalization layer, its failure breaks the pipeline between source and ELK.
+
+Duplicate event risk
+
+If both WORKFLOW_HISTORY and DOCUMENT_QUEUE are used together, the same action may appear twice. The CDC document recommends starting with WORKFLOW_HISTORY only to avoid duplication. 
+
+
+---
+
+8. Negative scenarios to cover
+
+Access log exists but no database change
+
+A user may click something and the access log will show it, but the database action may fail later. The zero-code document says access logs can capture failed actions even when the DB does not change. 
+
+Database change exists but no user log
+
+Some system actions or background jobs may appear only in CDC and not in access logs. The document says system-account actions may show up as system-initiated events. 
+
+Missing schema name
+
+The CDC document says a schema name must be included when documents move across workflows. Without it, cross-schema tracking becomes unclear. 
+
+
+---
+
+9. Clean version you can paste in your document
+
+ELK Ingestion Flow
+
+WebSphere access logs are captured by Filebeat.
+
+Filebeat parses the raw log line, extracts action and document ID, and sends the logs to Elasticsearch in daily indices.
+
+Oracle CDC captures CMWS database changes from tables such as WORKFLOW_HISTORY and DOCUMENT_QUEUE.
+
+NiFi receives CDC data and access-log data, converts both into a standard process-event format, and writes the final events into Elasticsearch.
+
+Elasticsearch stores the normalized events for process mining and analytics.
+
+
+Important Notes
+
+WORKFLOW_HISTORY is the primary CDC source for process events.
+
+Access logs are useful for user actions and failed requests.
+
+document_id, user_id, and timestamp are the main correlation fields.
+
+Access logs are stored in daily indices such as cmws-access-logs-%{+yyyy.MM.dd}.
+
+The final normalized event data is stored in a unified process index such as cmws-process-events.
+
+
+If you want, I can turn this into a formal document section with headings like “Architecture”, “NiFi Flow”, “ELK Ingestion”, and “Failure Scenarios”.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Got it — you want only NiFi → ELK connection, clearly structured, no extra theory.
+
+
+---
+
+NiFi to ELK Connection – Structured Explanation
+
+1. Objective
+
+NiFi will send processed events (JSON) to Elasticsearch so they can be stored, indexed, and used for analytics/process mining.
+
+
+---
+
+2. Connection Type
+
+As per document flow:
+
+> NiFi → Elasticsearch (Direct HTTP-based connection)
+
+
+
+NiFi uses an Elasticsearch processor to push data.
+
+
+---
+
+3. NiFi Side Configuration
+
+3.1 Processor Used
+
+From document flow:
+
+> PutElasticsearchRecord
+
+
+
+This is used to send structured records (JSON) to Elasticsearch.
+
+
+---
+
+3.2 Required Config in NiFi
+
+1. Elasticsearch Connection Details
+
+Elasticsearch URL
+Example:
+http://<elasticsearch-host>:9200
+
+Cluster should be reachable from NiFi
+
+
+
+---
+
+2. Index Name
+
+For processed events:
+cmws-process-events
+
+
+This is where final normalized events go.
+
+
+---
+
+3. Record Format
+
+NiFi must send data in JSON format
+
+Example structure:
+
+{
+  "case_id": "12345",
+  "activity": "Move to Pending",
+  "timestamp": "2026-04-10T10:30:00Z",
+  "resource": "USER1",
+  "source": "CDC"
+}
+
+
+---
+
+4. Record Reader & Writer
+
+In NiFi:
+
+Record Reader → JSON Reader
+
+Record Writer → JSON Record Set Writer
+
+
+This ensures data is properly serialized.
+
+
+---
+
+5. ID Strategy (Important)
+
+Choose how documents are stored:
+
+Auto-generated ID (default)
+OR
+
+Use document_id as ID (to avoid duplicates)
+
+
+
+---
+
+6. Batch Size
+
+NiFi sends data in batches (not one-by-one)
+
+Example:
+
+100–1000 records per request
+
+
+
+---
+
+4. ELK Side Configuration
+
+4.1 Elasticsearch Must Be Ready
+
+Elasticsearch service running on port 9200
+
+Accessible from NiFi network
+
+
+
+---
+
+4.2 Index Creation
+
+Index can be:
+
+Auto-created by Elasticsearch
+OR
+
+Pre-created with mapping
+
+
+
+---
+
+4.3 (Optional but Recommended) Mapping
+
+Define fields like:
+
+case_id → keyword
+
+activity → text
+
+timestamp → date
+
+resource → keyword
+
+
+
+---
+
+4.4 (Optional) Index Template
+
+To standardize structure for all events
+
+
+---
+
+5. End-to-End Flow
+
+Step-by-step:
+
+1. NiFi receives data (CDC / logs)
+
+
+2. NiFi processes and converts to standard JSON
+
+
+3. NiFi uses PutElasticsearchRecord
+
+
+4. Sends HTTP request to Elasticsearch
+
+
+5. Elasticsearch indexes data into cmws-process-events
+
+
+6. Data becomes searchable in Kibana
+
+
+
+
+---
+
+6. Data Flow Diagram (Simple)
+
+NiFi (Processed Events)
+        ↓
+PutElasticsearchRecord
+        ↓
+HTTP Request (POST /index/_doc)
+        ↓
+Elasticsearch
+        ↓
+Index: cmws-process-events
+
+
+---
+
+7. Failure Handling (Important)
+
+From NiFi Side
+
+If ES is down → retry or route to failure queue
+
+If data invalid → goes to failure relationship
+
+
+
+---
+
+From Elasticsearch Side
+
+Rejects:
+
+wrong format
+
+mapping mismatch
+
+
+
+
+---
+
+8. Key Decision Points (You Must Confirm)
+
+Ask client:
+
+1. What should be index name for final events?
+
+
+2. Do we use document_id as unique ID?
+
+
+3. Do we need strict mapping or dynamic?
+
+
+4. Expected batch size / throughput?
+
+
+5. Any authentication (basic auth / API key)?
+
+
+
+
+---
+
+9. One-Line Summary
+
+NiFi connects to Elasticsearch using PutElasticsearchRecord, sending JSON events over HTTP to a target index where Elasticsearch stores and indexes them.
+
+
+---
+
+If you want next, I can:
+
+Compare PutElasticsearchRecord vs PutElasticsearchHttp
+
+Or give exact NiFi config fields (UI-level)
+
+
+
+
+
+
+
+
+
+
+
+
+
+Good — now let’s clearly define the raw flow connection (Filebeat → ELK) in the same structured way.
+
+
+---
+
+Raw Log Flow – Connection to ELK (Structured)
+
+1. Objective
+
+Capture raw WebSphere access logs, do basic parsing, and send them directly to Elasticsearch for storage.
+
+This data is later used by NiFi for correlation and enrichment.
+
+
+---
+
+2. Connection Type
+
+> Filebeat → Elasticsearch (Direct HTTP connection)
+
+
+
+No NiFi involved in this step.
+
+
+---
+
+3. Source Side Configuration (Filebeat)
+
+3.1 Input Configuration
+
+Filebeat must know where logs are stored
+
+Example:
+
+Path:
+/var/log/websphere/cmws_access.log
+
+
+
+---
+
+3.2 Log Parsing
+
+Filebeat parses raw logs into structured fields.
+
+Required fields:
+
+timestamp (date + time)
+
+client_ip
+
+method (GET/POST)
+
+uri_stem
+
+uri_query
+
+status
+
+time_taken
+
+user (iv-user)
+
+
+
+---
+
+3.3 Action Extraction Logic
+
+Using script processor:
+
+/workflow/move.go → Move Item
+
+/workflow/getnext.go → Get Next Item
+
+/Workflow/GetDocument → View Document
+
+
+
+---
+
+3.4 Document ID Extraction
+
+From query:
+
+Example:
+
+docId=12345
+
+Extract:
+
+document_id = 12345
+
+
+---
+
+3.5 Output Configuration (Important)
+
+Filebeat sends data to Elasticsearch.
+
+Required:
+
+Elasticsearch host:
+
+http://<elasticsearch-host>:9200
+
+Index pattern:
+
+cmws-access-logs-%{+yyyy.MM.dd}
+
+
+👉 This creates daily indices.
+
+
+---
+
+4. ELK Side Configuration
+
+4.1 Elasticsearch Setup
+
+Elasticsearch running and reachable
+
+Port: 9200 open
+
+
+
+---
+
+4.2 Index Handling
+
+Index will be:
+
+Auto-created (default behavior)
+
+
+Example:
+
+cmws-access-logs-2026.04.10
+
+
+---
+
+4.3 (Optional) Mapping
+
+Define fields like:
+
+timestamp → date
+
+document_id → keyword
+
+action → keyword
+
+user → keyword
+
+
+
+---
+
+4.4 (Optional) Index Lifecycle
+
+Retention (e.g., 30–90 days)
+
+Delete old logs automatically
+
+
+
+---
+
+5. End-to-End Flow
+
+Step-by-step:
+
+1. User performs action in CMWS
+
+
+2. WebSphere logs HTTP request
+
+
+3. Filebeat reads log file
+
+
+4. Filebeat parses and enriches log
+
+
+5. Filebeat sends data to Elasticsearch
+
+
+6. Elasticsearch stores in daily index
+
+
+
+
+---
+
+6. Data Flow Diagram
+
+WebSphere Logs
+      ↓
+Filebeat
+      ↓
+Parse + Extract (action, document_id)
+      ↓
+HTTP Request
+      ↓
+Elasticsearch
+      ↓
+Index: cmws-access-logs-YYYY.MM.DD
+
+
+---
+
+7. Failure Scenarios
+
+Filebeat Issues
+
+File not readable → no logs captured
+
+Parsing failure → incomplete fields
+
+
+
+---
+
+Network Issues
+
+Cannot reach Elasticsearch → logs buffered locally
+
+
+
+---
+
+Elasticsearch Issues
+
+Index not created → ingestion fails
+
+Mapping conflict → data rejected
+
+
+
+---
+
+8. Negative Scenarios
+
+Missing document_id
+
+Some logs may not contain docId
+
+Cannot correlate with CDC events
+
+
+
+---
+
+URL not mapped
+
+Unknown endpoint → action not identified
+
+
+
+---
+
+Failed Requests
+
+HTTP 500/400 → action failed but still logged
+
+
+
+---
+
+9. Key Difference from NiFi Flow
+
+Raw Flow (Filebeat)	Processed Flow (NiFi)
+
+Raw/semi-processed logs	Fully structured events
+Stored in daily index	Stored in unified index
+No correlation	Correlation happens
+Lightweight parsing	Full transformation
+
+
+
+---
+
+10. One-Line Summary
+
+Filebeat reads WebSphere logs, parses them, and sends them directly to Elasticsearch daily indices without involving NiFi.
+
+
+---
+
+If you want next, I can combine both flows into one final architecture diagram explanation (interview-ready).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Yes — exactly right, and this is a very important flow in your architecture. Let me structure it clearly so you can explain it confidently.
+
+
+---
+
+NiFi Reading from Raw Index → Transform → Send to Processed Index
+
+1. What this flow means
+
+In this case:
+
+> NiFi does NOT get logs directly from Filebeat
+Instead, it reads already stored logs from Elasticsearch (raw index)
+
+
+
+Then:
+
+processes them
+
+converts them into structured events
+
+sends them back to Elasticsearch (processed index)
+
+
+
+---
+
+2. Why this approach is used
+
+This design is used because:
+
+Raw logs are already stored safely in ELK
+
+NiFi can process data independently and repeatedly
+
+Decouples ingestion and transformation
+
+Useful for reprocessing / backfilling
+
+
+
+---
+
+3. End-to-End Flow
+
+WebSphere Logs
+     ↓
+Filebeat
+     ↓
+Elasticsearch (raw index: cmws-access-logs-*)
+     ↓
+NiFi (reads from ES)
+     ↓
+Transformation & enrichment
+     ↓
+Elasticsearch (processed index: cmws-process-events)
+
+
+---
+
+4. NiFi Side Configuration (Important)
+
+4.1 Input from Elasticsearch
+
+NiFi uses:
+
+> QueryElasticsearchHTTP
+
+
+
+Required configs:
+
+Elasticsearch URL
+http://<host>:9200
+
+Index:
+
+cmws-access-logs-*
+
+Query:
+
+Time-based (e.g., last 5 min)
+
+Or incremental (based on timestamp)
+
+
+
+
+---
+
+4.2 Data Extraction
+
+NiFi extracts:
+
+uri_stem
+
+uri_query
+
+iv_user
+
+timestamp
+
+
+
+---
+
+4.3 Transformation Logic
+
+NiFi converts raw logs into events:
+
+Example:
+
+/workflow/move.go → "Move Item"
+
+/workflow/getnext.go → "Get Next Item"
+
+
+
+---
+
+4.4 Document ID Extraction
+
+From:
+
+docId=12345
+
+→ Extract:
+
+case_id = 12345
+
+
+---
+
+4.5 Standard Event Format
+
+NiFi converts into:
+
+{
+  "case_id": "12345",
+  "activity": "Move Item",
+  "timestamp": "...",
+  "resource": "USER1",
+  "source": "access_log"
+}
+
+
+---
+
+4.6 Output to Elasticsearch
+
+NiFi uses:
+
+> PutElasticsearchRecord
+
+
+
+Config:
+
+Index:
+
+cmws-process-events
+
+Format: JSON
+
+
+
+---
+
+5. ELK Side (What Happens)
+
+Raw Index
+
+Stores original logs
+
+Example:
+
+cmws-access-logs-2026.04.10
+
+
+Processed Index
+
+Stores clean events
+
+Example:
+
+cmws-process-events
+
+
+
+---
+
+6. Key Design Concept (Very Important)
+
+👉 ELK acts as both:
+
+1. Storage layer (raw logs)
+
+
+2. Source for further processing (NiFi reads from it)
+
+
+
+
+---
+
+7. Failure Scenarios
+
+NiFi cannot read from ES
+
+Wrong query
+
+Index not found
+
+Network issue
+
+
+
+---
+
+Duplicate processing
+
+Same logs processed multiple times
+→ Need checkpoint / timestamp tracking
+
+
+
+---
+
+Missing fields
+
+docId missing → cannot create event
+
+
+
+---
+
+Transformation failure
+
+Unknown URL → no activity mapping
+
+
+
+---
+
+Write failure to processed index
+
+ES down → data loss unless retried
+
+
+
+---
+
+8. Negative Scenarios
+
+Logs exist but not useful
+
+No document_id → no correlation
+
+
+
+---
+
+Delay between raw and processed
+
+Data available in raw index but not yet processed
+
+
+
+---
+
+Partial correlation
+
+Only log event exists, no CDC match
+
+
+
+---
+
+9. When this pattern is used
+
+This pattern is useful when:
+
+You want reprocessing capability
+
+You want decoupled pipelines
+
+You want audit + transformation separation
+
+
+
+---
+
+10. One-Line Summary
+
+NiFi reads raw logs from Elasticsearch, transforms them into structured workflow events, and writes them back to a separate processed index.
+
+
+---
+
+If you want next, I can give:
+
+A final combined architecture explanation (ready to present)
+
+Or which approach is better: direct vs via raw index (interview-level answer)
+

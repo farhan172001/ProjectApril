@@ -1453,3 +1453,123 @@ If you want, I can turn this into a neat document section with headings like “
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Yes — in NiFi, the processor is the thing that actually calls the ELK API.
+
+NiFi structure to call Elasticsearch
+
+1) For reading data from Elasticsearch
+
+Processor: QueryElasticsearchHTTP
+Use: search / fetch data from ES
+Setup needed:
+
+Elasticsearch URL
+
+Index name
+
+Query JSON
+
+SSL/auth if secured
+
+
+What it does:
+NiFi sends the search request internally to Elasticsearch, like: /_search
+
+
+---
+
+2) For sending data to Elasticsearch
+
+Processor: PutElasticsearchRecord
+Use: insert / update data into ES
+Setup needed:
+
+Elasticsearch URL
+
+Index name
+
+Record Reader, usually JsonTreeReader / JsonRecordSetWriter
+
+SSL/auth if secured
+
+
+What it does:
+NiFi converts FlowFile data into Elasticsearch bulk/index format and sends it internally.
+
+
+---
+
+3) For direct custom API call
+
+Processor: InvokeHTTP
+Use: when you want full control like Java RestTemplate
+Setup needed:
+
+Method: GET / POST / PUT
+
+Target URL
+
+Headers
+
+Body in FlowFile content
+
+
+What it does:
+NiFi directly calls the API endpoint you give.
+
+
+---
+
+Simple flow
+
+Input data → NiFi processor → Elasticsearch API → Response / indexed data
+
+
+---
+
+What you configure in NiFi
+
+URL / host
+
+Index name
+
+Query or payload
+
+Auth / SSL
+
+Reader / Writer if using record processors
+
+
+
+---
+
+Very short summary
+
+Read from ELK: QueryElasticsearchHTTP
+
+Write to ELK: PutElasticsearchRecord
+
+Custom HTTP call: InvokeHTTP
+
+
+I can turn this into a one-slide architecture explanation with arrows and box format.
+
+

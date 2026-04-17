@@ -1573,3 +1573,32 @@ Custom HTTP call: InvokeHTTP
 I can turn this into a one-slide architecture explanation with arrows and box format.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+flowchart LR
+
+    A[CMWS Database] --> B[CDC]
+    B --> C[Kafka]
+    C --> D[NiFi]
+
+    D --> E[Elasticsearch Processed Index\ncmws-process-events]
+
+    F[WebSphere Logs] --> G[Filebeat]
+    G --> H[Elasticsearch Raw Index\ncmws-access-logs]
+
+    H --> D
+
+    E --> I[Kibana]
+    E --> J[UiPath Process Mining]

@@ -1208,3 +1208,248 @@ A final combined architecture explanation (ready to present)
 
 Or which approach is better: direct vs via raw index (interview-level answer)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Here is the combined architecture in a simple, structured way based on the two documents. The goal is to show how CMWS data moves from source systems into ELK, and how NiFi fits in the middle.
+
+Combined Architecture Overview
+
+The architecture has two input streams:
+
+1. Database changes from CMWS through CDC
+
+
+2. User action logs from WebSphere access logs
+
+
+
+These two streams are used for process mining and workflow analysis. The documents show that the database side is captured through CDC and the access-log side is captured through Filebeat, with NiFi used for normalization and Elasticsearch used for storage and analysis.
+
+
+---
+
+1. Database-driven flow
+
+CMWS writes workflow actions into Oracle through stored procedures, and the database is treated as the event log. The CDC document says this is especially true for WORKFLOW_HISTORY, which is the primary event source, while DOCUMENT_QUEUE, CASE_DIARY, task tables, and other schema-specific tables provide additional context. 
+
+The flow is:
+
+Oracle DB
+→ CDC
+→ Kafka or equivalent transport
+→ NiFi
+→ Elasticsearch
+
+NiFi reads the CDC stream, extracts the important fields, converts them into the standard process-event format, and writes the result into Elasticsearch. The document shows the target process-event index as cmws-process-events.
+
+
+---
+
+2. Access-log flow
+
+WebSphere already logs user HTTP requests without application code changes. The zero-code document says these logs contain the timestamp, URL path, user identity from WebSEAL, response code, response time, and query parameters such as document ID. 
+
+The flow is:
+
+WebSphere access logs
+→ Filebeat
+→ Elasticsearch raw access-log index
+
+The document shows Filebeat parsing the raw log line, mapping URL patterns such as /workflow/move.go, /workflow/getnext.go, and /Workflow/GetDocument into business actions, and extracting document_id from query parameters. It writes these logs into daily indices with the pattern cmws-access-logs-%{+yyyy.MM.dd}. 
+
+
+---
+
+3. NiFi’s role in the middle
+
+NiFi is the normalization layer. It is responsible for taking either:
+
+CDC data from the database stream, or
+
+raw access-log data from Elasticsearch
+
+
+and converting it into a standard process-event format that process mining can use. The documents define the core process-mining fields as case_id, activity, timestamp, and resource.
+
+NiFi does three main things:
+
+reads the source data
+
+maps it into the process-event structure
+
+writes the final event into Elasticsearch
+
+
+
+---
+
+4. Two ways NiFi can work with ELK
+
+Option A: NiFi reads CDC data directly and writes to processed index
+
+This is the database-event path.
+
+NiFi receives CDC records, transforms them, and writes them directly into the unified process-event index. The document shows this as the CDC path into Elasticsearch with PutElasticsearchRecord.
+
+Option B: NiFi reads raw access logs from Elasticsearch and rewrites them into processed index
+
+This is the raw-log transformation path.
+
+In this case, Filebeat first stores logs in a raw daily index, and NiFi later reads those logs from Elasticsearch using a query-based step, extracts the fields again if needed, converts them into process events, and writes them to the processed index. The zero-code document explicitly shows this idea through the access-log index and NiFi normalization flow. 
+
+So ELK is used in two layers:
+
+raw storage layer for access logs
+
+processed event layer for normalized workflow events 
+
+
+
+---
+
+5. Final event output
+
+The final event stored in ELK should contain the process-mining fields:
+
+case_id from document_id
+
+activity from workflow event codes or URL action mapping
+
+timestamp from event time
+
+resource from user identity
+
+source such as CDC or access_log
+
+schema or workflow context where needed
+
+
+This final output is what UiPath Process Mining consumes to reconstruct the real workflow. 
+
+
+---
+
+6. Combined end-to-end view
+
+A clean combined picture is:
+
+1. CMWS database changes are captured by CDC.
+
+
+2. WebSphere user actions are captured by Filebeat.
+
+
+3. Raw access logs are stored in daily indices in Elasticsearch.
+
+
+4. NiFi reads CDC data and/or raw log data.
+
+
+5. NiFi converts both into a standard event structure.
+
+
+6. NiFi writes the normalized events into the final process-event index.
+
+
+7. UiPath Process Mining reads the final index for analysis.
+
+
+
+
+---
+
+7. What should be configured on each side
+
+Raw log side
+
+WebSphere access logging
+
+Filebeat input path for the access log file
+
+URL-to-action mapping
+
+document ID extraction
+
+Elasticsearch daily raw-log index pattern cmws-access-logs-%{+yyyy.MM.dd} 
+
+
+NiFi side
+
+CDC input or raw-log input
+
+field mapping to case_id, activity, timestamp, resource
+
+correlation using document_id, user_id, and timestamp
+
+Elasticsearch writer to the processed index cmws-process-events
+
+
+Final ELK side
+
+raw access-log index
+
+unified process-event index
+
+support for process mining and analytics
+
+
+
+---
+
+8. Failure and negative scenarios
+
+The documents imply a few important risks.
+
+If Filebeat cannot parse the access log, then action mapping and document ID extraction fail. 
+
+If CDC misses a database change, the workflow event will not appear in the event stream. 
+
+If NiFi cannot transform or write the record, the final process-event index will be incomplete.
+
+If both WORKFLOW_HISTORY and DOCUMENT_QUEUE are used together without deduplication, duplicate events may appear. The CDC document recommends starting with WORKFLOW_HISTORY only because it is already an audit log and is enough for phase 1. 
+
+If an access log has no docId, then correlation with CDC becomes difficult or impossible. 
+
+
+---
+
+9. One-line summary
+
+The combined architecture is: database changes and access logs are captured separately, normalized in NiFi, stored in Elasticsearch as both raw and processed data, and then used by process mining to reconstruct the real workflow behavior.
+
+If you want, I can turn this into a neat document section with headings like “Architecture”, “Raw Log Flow”, “Processed Event Flow”, and “Failure Scenarios.”
+
+
+
+
+
+
+

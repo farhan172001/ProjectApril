@@ -1,0 +1,694 @@
+Data Synchronization Strategies: From Source Database to Elasticsearch 
+
+ 
+
+Option 1: Direct Ingestion (Spring Boot → Elasticsearch) 
+
+Overview 
+
+In this approach, our Spring Boot application acts as the direct bridge. It is responsible for three steps: 
+
+Pulling data from our database. 
+
+Translating that data into a format Elasticsearch understands. 
+
+Pushing it directly to the Elasticsearch cluster using the modern Java Client. 
+
+Think of this as "direct delivery"—there is no middleman. Our application manages the entire journey of the data. 
+
+ 
+
+How We Will Make It Efficient 
+
+The "Box" Method (Bulk Processing): Instead of sending every single database row one by one (which is very slow), we will group them into "boxes" of 1,000 records. We send one large request instead of 1,000 small ones. This drastically reduces the load on our network and Elasticsearch. 
+
+Smart Scaling (Work Sharing): If we run multiple instances of our application, we need to make sure they don't work on the same data. We will use a "Status" column in our database (e.g., is_indexed). 
+
+The "Skip Locked" Trick: We will use a database feature called SKIP LOCKED. This allows Instance A to grab the first 1,000 rows while Instance B automatically skips those and grabs the next 1,000. This lets us scale horizontally without any data overlapping. 
+
+ 
+
+Pros (The Benefits) 
+
+Simple Architecture: We don’t need to install or manage extra software like Kafka or Logstash. This keeps our infrastructure "lean." 
+
+Total Control: Since the logic lives in our Java code, we have 100% control over how the data is transformed or cleaned before it reaches the search engine. 
+
+Lower Costs: Fewer moving parts mean lower cloud hosting costs and less maintenance work for our DevOps team. 
+
+Cons (The Risks) 
+
+Direct Pressure: If Elasticsearch becomes slow, our application will also slow down because it is waiting for a response. 
+
+No Safety Net: If both the application and Elasticsearch have issues at the same time, we have to be very careful to ensure no data "falls through the cracks" during the transfer. 
+
+App Heavy-Lifting: The application has to spend CPU and Memory power on moving data, which could otherwise be used for user features. 
+
+ 
+
+The Modern Implementation (Java Client) 
+
+Avoid the deprecated RestHighLevelClient. Use the Elasticsearch Java Client (introduced in 7.17/8.x). 
+
+Key Dependency: 
+
+<dependency> 
+   <groupId>co.elastic.clients</groupId> 
+   <artifactId>elasticsearch-java</artifactId> 
+   <version>8.x.x</version> 
+</dependency> 
+
+ 
+
+ 
+
+Our Proposed Solutions for a Reliable Build 
+
+Potential Failure 
+
+What Happens? 
+
+Our Solution 
+
+Elasticsearch is Offline 
+
+The app tries to send data but gets a "Connection Refused" error. 
+
+Spring Retry: We will use a retry policy. The app will wait 5 seconds, then 10, then 30 to try again before giving up. 
+
+The App Crashes During Push 
+
+The app has pulled data from the DB but dies before Elasticsearch confirms receipt. 
+
+Transactional Safety: We only change the status in the DB from PENDING to SUCCESS after we get a "thumbs up" from Elasticsearch. On restart, the app simply picks up the PENDING rows again. 
+
+Data Format Error 
+
+A specific record has a "text" value where Elasticsearch expects a "number," causing a crash. 
+
+Dead Letter Logging: We will catch these specific errors, log the "Bad ID," and mark it as FAILED  so it doesn't block the rest of the queue. 
+
+Elasticsearch is "Too Busy" 
+
+Our app is sending data faster than Elasticsearch can write it (Backpressure). 
+
+Circuit Breaker: We use a tool called Resilience4j. If it detects Elasticsearch is struggling, it "opens the circuit" and stops sending data for a few minutes to let the engine recover. 
+
+Duplicate Data Creation 
+
+A network glitch makes the app send the same data twice. 
+
+ID Mapping: By forcing Elasticsearch to use our Database Primary Key as its internal ID, the second request will simply overwrite the first one instead of creating a duplicate. 
+
+ 
+
+Step 1: Infrastructure Setup (The Connection) 
+
+To begin, we need an Elasticsearch cluster (either hosted on-premise or in the cloud). 
+
+Security: We will set up an API Key or a Username/Password in Elasticsearch for our Spring Boot app to use. 
+
+The Index: We will pre-create the "Index" (the search table) in Elasticsearch and define its "Mapping" (telling it which fields are dates, numbers, or text). 
+
+ 
+
+Step 2: Application Configuration 
+
+We need to tell our Spring Boot app where Elasticsearch lives. We do this in the application.yml file and a small Java config class. 
+
+The Config File: 
+
+code Yaml 
+
+downloadcontent_copy 
+
+expand_less 
+
+elasticsearch: 
+ url: "https://our-es-cluster:9200" 
+ api-key: "base64-encoded-key" 
+
+The Java Client Setup: 
+
+code Java 
+
+downloadcontent_copy 
+
+expand_less 
+
+@Configuration 
+public class ElasticConfig { 
+   @Bean 
+   public ElasticsearchClient getClient() { 
+       // We set up the "Phone Line" to talk to Elasticsearch here 
+       RestClient restClient = RestClient.builder(new HttpHost("our-es-cluster", 9200)).build(); 
+       ElasticsearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper()); 
+       return new ElasticsearchClient(transport); 
+   } 
+} 
+
+ 
+
+Step 3: The Data Extraction Logic  
+
+We will create a service that periodically asks the database: "Which records have changed and are not yet in the search engine?" 
+
+Efficiency: We use the SKIP LOCKED SQL command. This allows our app to grab a batch of 500 or 1,000 records safely, even if we have multiple instances of the app running. 
+
+The Query: SELECT * FROM products WHERE needs_sync = true LIMIT 500 FOR UPDATE SKIP LOCKED. 
+
+ 
+
+Step 4: The Ingestion Logic  
+
+Once we have the 500 records, we don't send them one-by-one. We use the Bulk API. 
+
+The Java Implementation: 
+
+code Java: 
+
+ 
+
+public void shipToElastic(List<Product> products) { 
+   BulkRequest.Builder br = new BulkRequest.Builder(); 
+ 
+   for (Product product : products) { 
+       br.operations(op -> op 
+           .index(idx -> idx 
+               .index("products_search") 
+               .id(product.getId().toString()) // Keeps data unique 
+               .document(product) 
+           ) 
+       ); 
+   } 
+ 
+   // We send the whole batch at once 
+   BulkResponse response = client.bulk(br.build()); 
+ 
+   // If ES says "OK", we update our DB status to 'SUCCESS' 
+   if (!response.errors()) { 
+       updateDatabaseStatus(products, "SUCCESS"); 
+   } else { 
+       // We look for specific errors in the batch 
+       handlePartialErrors(response); 
+   } 
+} 
+
+ 
+
+Step 5: Failure Handling & "Self-Healing" 
+
+Since we don't have a message broker (like Kafka) to act as a safety net, we build the safety directly into our code: 
+
+The "Retry" Strategy: If the network flickers and the "Shipment" fails, we do not update the status. The app will simply try again in the next scheduled cycle (e.g., 5 minutes later). 
+
+Circuit Breakers: We will use a library called Resilience4j. If Elasticsearch goes down completely, the "Circuit Breaker" will trip. This tells our app: "Stop trying to fetch from the DB for now; the search engine is sick. Let's wait 5 minutes before trying again." This prevents our app from wasting CPU power and crashing itself. 
+
+Dead Letter Logging: If a specific record is "corrupt" (e.g., a field is too long), Elasticsearch will reject it. We will catch this specific error, log it for our developers to see, and mark that one row as FAILED in the database so it doesn't block the rest of the records. 
+
+ 
+
+ 
+
+ 
+
+Option 2: Messaging Buffer (Spring Boot -> kafka/RabbitMQ -> Logstash -> ES) 
+
+How it Works (The Concept) 
+
+Instead of our Spring Boot app talking directly to Elasticsearch, it puts the data into a high-speed "Digital Post Office" (Kafka or RabbitMQ). A separate worker (Logstash) then picks up that mail and delivers it to Elasticsearch. 
+
+This creates a decoupled system: the part of the app that reads the database doesn't need to care if the search engine is currently awake or busy. 
+
+ 
+
+Our Implementation Steps 
+
+The Producer (Spring Boot): We will configure our app to read from the database and "publish" those records as messages to a Kafka Topic. 
+
+The Message Broker (Kafka): This acts as our massive waiting room. It stores our data safely on a disk until it is successfully processed. 
+
+The Consumer (Logstash): We will set up Logstash to "listen" to Kafka. As soon as a new message arrives, Logstash pulls it, cleans it up if necessary, and pushes it to Elasticsearch. 
+
+The Destination (Elasticsearch): Receives the clean data from Logstash and makes it searchable. 
+
+ 
+
+Pros and Cons 
+
+Pros (The Benefits): 
+
+Ultimate Reliability: If Elasticsearch goes down for maintenance for 3 hours, no data is lost. Kafka simply holds onto it and waits. 
+
+Traffic Control (Backpressure): If we suddenly have 1 million database updates, we won't crash Elasticsearch. Kafka buffers the load, and Logstash "sips" the data at a speed Elasticsearch can handle. 
+
+Independent Scaling: If we have a huge backlog, we can simply start more "Logstash" instances to clear the queue faster without touching our main application. 
+
+Cons (The Challenges): 
+
+Infrastructure Overhead: We need to manage Kafka and Logstash, which requires more server resources and setup time. 
+
+Slight Latency: Data might take an extra second or two to appear in search results because it has to travel through the "Post Office" first. 
+
+ 
+
+Failure Scenarios & Our Solutions 
+
+In this high-scale model, we handle failures by isolating them. 
+
+Potential Failure 
+
+What Happens? 
+
+Our Solution 
+
+Elasticsearch is Offline 
+
+Logstash cannot deliver the data. 
+
+Automatic Pausing: Logstash will stop pulling messages from Kafka and wait. The data remains 100% safe inside Kafka until Elasticsearch is back online. 
+
+Logstash Crashes 
+
+The "Delivery Truck" stops moving. 
+
+Consumer Offsets: Kafka remembers exactly which message Logstash read last. When Logstash restarts, it picks up exactly where it left off—no missed data. 
+
+Spring Boot Crashes 
+
+The app stops sending data to Kafka. 
+
+DB Checkpointing: Our app tracks the "Last Processed ID" in the database. Upon restart, it simply resumes from that ID. 
+
+Kafka is Offline 
+
+The app cannot "post" its messages. 
+
+Local Retry: We will configure the Spring Boot Kafka Template to retry the connection and, if necessary, stop the DB extraction until the broker is healthy. 
+
+Bad/Corrupt Data 
+
+A record has an error that prevents it from being indexed. 
+
+Dead Letter Queue (DLQ): Instead of the whole system getting "stuck" on a bad record, Logstash will move the "bad" message to a separate "Error Topic" for us to inspect later. 
+
+ 
+
+Tools We Will Use to Implement This 
+
+Spring Kafka: To allow our application to talk to the broker with minimal code. 
+
+Apache Kafka: Our chosen message broker (it is the industry standard for high-speed data streaming). 
+
+Logstash Kafka Input Plugin: A pre-built tool that connects Kafka to Elasticsearch without us having to write custom "Consumer" code. 
+
+Kibana Monitoring: To watch our Kafka "lag" (how much data is waiting in the queue) so we know if we need to scale up. 
+
+ 
+
+Here is how we will set this up and the steps we will take to build it. 
+
+Step 1: Setting up the Infrastructure  
+
+Before writing code, we need the "Post Office" (Kafka) and the "Delivery Truck" (Logstash) running. 
+
+Kafka Setup: We will set up a Kafka cluster (at least 3 nodes for high availability). Inside Kafka, we create a Topic (a dedicated channel) called db-to-search-sync. 
+
+Logstash Setup: We install Logstash on a server that has access to both Kafka and Elasticsearch. 
+
+ 
+
+Step 2: Preparing the Database  
+
+The Log Reader: We will use a CDC tool (like Debezium) that sits next to the database. Its only job is to watch that log and instantly turn every change into a message. 
+
+Step 3: Building the Spring Boot Producer  
+
+This is the code inside our application that moves data from the DB to Kafka. 
+
+What we use: spring-kafka library. 
+
+The Code Logic: 
+
+Fetch: Use the SKIP LOCKED method (mentioned in Option 1) to grab 500 PENDING rows. 
+
+Convert: Turn the database rows into JSON strings. 
+
+Send: Use the KafkaTemplate to "publish" the JSON to our Kafka topic. 
+
+Confirm: Once Kafka says "I have it," we update the DB status to IN_QUEUE. 
+
+code : 
+
+// Simplified logic example 
+@Scheduled(fixedDelay = 5000) // Runs every 5 seconds 
+public void sendToKafka() { 
+   List<ProductEntity> data = repository.findBatchToSend(); 
+   for (ProductEntity product : data) { 
+       kafkaTemplate.send("db-to-search-sync", product.getId().toString(), product.toJson()); 
+       product.setSyncStatus("IN_QUEUE"); 
+       repository.save(product); 
+   } 
+} 
+
+ 
+
+Step 4: Configuring Logstash  
+
+Logstash doesn't require us to write Java code. Instead, we write a Configuration File that tells it how to move data from Kafka to Elasticsearch. 
+
+The Logstash Instruction Sheet (logstash.conf): 
+
+code : 
+
+input { 
+ kafka { 
+   bootstrap_servers => "kafka-broker:9092" 
+   topics => ["db-to-search-sync"] 
+   group_id => "logstash-consumer-group" # Remembers where it left off 
+ } 
+} 
+ 
+filter { 
+ # We can clean or transform data here if needed 
+ json { source => "message" } 
+} 
+ 
+output { 
+ elasticsearch { 
+   hosts => ["http://elasticsearch:9200"] 
+   index => "products_search" 
+   document_id => "%{id}" # Matches DB ID to prevent duplicates 
+ } 
+} 
+
+ 
+
+Step 5: Managing Failures & Safety Checks 
+
+To ensure 99.9% reliability, we apply these specific configurations: 
+
+Acks = All: We configure the Spring Boot app to wait for a "Full Receipt" from Kafka before moving to the next record. This ensures Kafka has safely written the data to its disk. 
+
+Consumer Offsets: Logstash is configured to use "Consumer Groups." If Logstash is turned off for an hour, Kafka remembers exactly which message was the last one Logstash read. When it turns back on, it starts from that exact spot. 
+
+Persistent Queues: We will enable Logstash's "Persistent Queue" feature. If Logstash receives a message but Elasticsearch is down, Logstash stores that message on its own local hard drive as a second layer of safety. 
+
+Dead Letter Topic: If a message is "broken" (e.g., bad JSON), Kafka will move it to a sync-failed-debug topic so we can fix it without stopping the rest of the system. 
+
+ 
+
+Option 3, which we call the "Log-and-Ship" strategy. In this model, we treat our data like a diary. Our application simply "writes it down" in a local file, and a specialized "courier" (Filebeat) handles the delivery to Elasticsearch. 
+
+ 
+
+Option 3: Log-Based Shipping (The "Courier" Strategy) 
+
+How it Works (The Concept) 
+
+Instead of our Spring Boot app trying to manage network connections to Elasticsearch or Kafka, it simply writes the database records into a JSON log file on the server's hard drive. 
+
+A tiny, high-speed agent called Filebeat, sits on the same server. It "watches" the log file. Every time a new line is written, Filebeat picks it up and ships it to Elasticsearch. 
+
+ 
+
+Our Implementation Steps 
+
+The Logger (Spring Boot): We will use a library called logstash-logback-encoder. We will create a dedicated "Search Logger" in our app that formats our database records into clean JSON lines. 
+
+The Storage (Local Disk): The app writes these JSON lines to a specific folder (e.g., /var/logs/search-sync/*.json). 
+
+The Courier (Filebeat): We install Filebeat on the server. We tell it: "Watch this folder. If you see a new log line, send it to Elasticsearch immediately." 
+
+The Registry: Filebeat keeps a small "Registry File" (a digital bookmark). It remembers exactly which line of which file it last read. 
+
+ 
+
+Pros and Cons 
+
+Pros (The Benefits): 
+
+Ultra-Low Overhead: Writing to a local disk is significantly faster than making a network call. Our application won't slow down, even if the network is busy. 
+
+Built-in Safety: If the network goes out, the data is already safely written to the disk. It’s not sitting in the "volatile" memory of the app. 
+
+Easy Debugging: If we suspect data isn't moving, we can simply open the log file on the server and see exactly what the app tried to send. 
+
+Cons (The Challenges): 
+
+Disk Space Management: We must manage the log files. If we don't "rotate" (delete old files), we could fill up the server's hard drive. 
+
+Server Access: Filebeat needs to be installed on the same server/container as the Spring Boot app. 
+
+ 
+
+Java Implementation & Setup 
+
+1. Spring Boot Setup (logback-spring.xml) 
+
+We configure our app to write to a file in JSON format. 
+
+code Xml 
+
+downloadcontent_copy 
+
+expand_less 
+
+<appender name="SEARCH_SYNC_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender"> 
+   <file>/logs/search-data.json</file> 
+   <encoder class="net.logstash.logback.encoder.LogstashEncoder" /> 
+   <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy"> 
+       <fileNamePattern>/logs/search-data-%d{yyyy-MM-dd}.%i.json</fileNamePattern> 
+       <maxFileSize>100MB</maxFileSize> 
+       <maxHistory>7</maxHistory> <!-- Keep 7 days of logs as backup --> 
+   </rollingPolicy> 
+</appender> 
+
+2. Filebeat Setup (filebeat.yml) 
+
+We tell Filebeat where to look and where to send. 
+
+code Yaml 
+
+downloadcontent_copy 
+
+expand_less 
+
+filebeat.inputs: 
+- type: log 
+ paths: 
+   - /logs/search-data.json 
+ json.keys_under_root: true 
+ 
+output.elasticsearch: 
+ hosts: ["https://our-es-cluster:9200"] 
+ api_key: "our-api-key" 
+
+ 
+
+Failure Scenarios & Our Solutions 
+
+Potential Failure 
+
+What Happens? 
+
+Our Solution 
+
+Elasticsearch is Offline 
+
+Filebeat cannot deliver the data. 
+
+The Registry Bookmark: Filebeat stops reading the file. It "remembers" the last line it successfully sent. Once ES is back, it resumes from that exact line. 
+
+Spring Boot Crashes 
+
+The app stops writing logs. 
+
+Persistence: Any data written before the crash is already safe on the disk. Filebeat will continue to ship the remaining logs even if the app is down. 
+
+Filebeat Crashes 
+
+The "Courier" stops moving. 
+
+Automatic Resume: When Filebeat restarts, it checks its "Registry File," realizes it is behind, and "tails" the log file at high speed to catch up. 
+
+Disk is Full 
+
+The app cannot write new logs. 
+
+Rotation Policy: We will set a "Rolling Policy" to automatically delete logs older than 7 days or once they exceed a certain size (e.g., 10GB). 
+
+Server Reboots 
+
+Both the app and Filebeat stop. 
+
+Dual Recovery: Upon reboot, Spring Boot starts writing new logs, and Filebeat uses its registry to finish shipping the old logs before starting on the new ones. 
+
+ 
+
+Summary of what we are going to use 
+
+Logback + Logstash Encoder: To turn Java objects into JSON log lines. 
+
+Linux Disk Storage: To act as our temporary "waiting room." 
+
+Filebeat Agent: The lightweight delivery service. 
+
+Log Rotation: To ensure we don't run out of disk space. 
+
+ 
+
+ 
+
+This section details Option 4, which we call the "Processing Station" strategy. In this model, our application sends data directly over the network to a central "middleman" (Logstash), which cleans, transforms, and delivers the data to Elasticsearch. 
+
+ 
+
+Option 4: The "Middleman" (The Processing Station Strategy) 
+
+How it Works (The Concept) 
+
+Instead of writing to a file or a message broker, our Spring Boot app opens a direct "phone line" (a TCP or HTTP connection) to Logstash. 
+
+As our app processes database records, it "streams" them immediately to Logstash. Logstash acts like a specialized factory—it receives the raw data, formats it, adds extra information (like timestamps or geography), and then pushes it into Elasticsearch. 
+
+ 
+
+Our Implementation Steps 
+
+The Logstash Setup: We set up one or more Logstash instances. We configure them to "listen" for incoming data on a specific network port (e.g., port 5044). 
+
+The Load Balancer: To ensure we are always online, we place a Load Balancer (like NGINX or F5) in front of our Logstash instances. If one Logstash station goes down, the "phone call" from our app is automatically routed to a healthy one. 
+
+The App Configuration: We add the logstash-logback-encoder to our Spring Boot app. We tell the app to send its search data to the Load Balancer's IP address. 
+
+The Transformation: We write "Filters" in Logstash to clean the data (e.g., "Remove sensitive user info" or "Fix date formats") before it hits the search engine. 
+
+ 
+
+Pros and Cons 
+
+Pros (The Benefits): 
+
+Centralized Logic: We can change how our data is formatted in Logstash without ever restarting or re-coding our main Spring Boot application. 
+
+Lean Application: Our app doesn't need to know anything about Elasticsearch. It just sends data to one place (Logstash) and forgets about it. 
+
+Easy Transformation: Logstash is incredibly powerful at "mutating" data—it can combine fields, calculate values, and enrich data very easily. 
+
+Cons (The Challenges): 
+
+Network Dependency: Since data travels over the network, if our internal network is slow or unstable, data delivery can be delayed. 
+
+Potential Data Loss: If Logstash and the Load Balancer are both down at the same time, the app might have nowhere to send the data (unless we use a local buffer). 
+
+ 
+
+Failure Scenarios & Our Solutions 
+
+Potential Failure 
+
+What Happens? 
+
+Our Solution 
+
+Logstash is Offline 
+
+The app tries to "call" Logstash but gets no answer. 
+
+Persistent Queues (PQ): We will enable Logstash's "Persistent Queue" feature. This means once Logstash receives data, it writes it to its own disk immediately so it can't be lost even if the power goes out. 
+
+Network Hiccup 
+
+The connection between the app and Logstash is temporarily cut. 
+
+Async Buffer: We will configure the Spring Boot app to use an "Asynchronous Appender." It will hold a small amount of data in its memory and keep trying to reconnect until the "phone line" is open again. 
+
+Logstash is "Too Busy" 
+
+Our app is sending data faster than Logstash can process it. 
+
+Backpressure: Logstash will signal the app to "slow down." Because we use TCP, the app will naturally wait for Logstash to become available before sending more. 
+
+Elasticsearch is Offline 
+
+Logstash has the data but cannot deliver it to the search engine. 
+
+Output Retries: Logstash will automatically keep the data in its "Persistent Queue" and keep retrying the delivery to Elasticsearch until it succeeds. 
+
+One Logstash Instance Crashes 
+
+50% of our processing power is gone. 
+
+High Availability (HA): Our Load Balancer will detect the crash in milliseconds and automatically send all data to the second Logstash instance. 
+
+ 
+
+ 
+
+ 
+
+Java Implementation & Setup 
+
+1. Spring Boot Setup (logback-spring.xml) 
+
+We tell the app to stream data to the Logstash Load Balancer. 
+
+code Xml 
+
+downloadcontent_copy 
+
+expand_less 
+
+<appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender"> 
+   <destination>logstash-load-balancer:5044</destination> 
+   <encoder class="net.logstash.logback.encoder.LogstashEncoder" /> 
+    
+   <!-- Safety: If Logstash is down, keep 10,000 records in memory to retry --> 
+   <queueSize>10000</queueSize> 
+</appender> 
+
+2. Logstash Configuration (middleman.conf) 
+
+We tell Logstash to listen and then ship to Elasticsearch. 
+
+code Bash 
+
+downloadcontent_copy 
+
+expand_less 
+
+input { 
+ tcp { 
+   port => 5044 
+   codec => json 
+ } 
+} 
+ 
+filter { 
+ # Example: Add a "processed_by" tag 
+ mutate { add_tag => ["processed_at_middleman"] } 
+} 
+ 
+output { 
+ elasticsearch { 
+   hosts => ["https://our-es-cluster:9200"] 
+   index => "products_search" 
+ } 
+} 
+
+ 
+
+Summary Recommendation for Option 4 
+
+We recommend this approach if we need to clean or transform data heavily before it reaches Elasticsearch, but we don't want to manage the full complexity of Kafka (Option 2). It provides a great balance of flexibility and centralized management, especially if we have multiple different apps that all need to send data to the same search engine. 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 

@@ -257,3 +257,13 @@ Business Value
 This canonical schema gives us one standard event model across all CMWS workflows, makes CDC data easier to consume, and provides a stable foundation for ELK indexing and process mining analysis. It also supports cross-schema correlation by preserving schema_name, which is important because the 21 CMWS schemas share the same structure but represent different workflows. 
 
 If you want, I can turn this into a Word-ready formal section with title, subtitle, and cleaner business wording.
+
+
+
+
+
+
+
+
+I have checked the CMWS workflow schemas, but I was not able to find a WORKFLOW_HISTORY table. Instead, I found a DOCUMENT_HISTORY table in some schemas with columns such as DOCUMENT_HISTORY_ID, DOCUMENT_ID, DOCUMENT_EVENT_CD, USER_IONS_ID, USER_MACHINE_NAME, EVENT_DATA1, EVENT_DATA2, CREATED_DATE, CREATED_BY, and MODIFIED_TS.
+Could you please confirm whether DOCUMENT_HISTORY is the equivalent of WORKFLOW_HISTORY in our environment, or am I missing another table or schema where the workflow history is stored?

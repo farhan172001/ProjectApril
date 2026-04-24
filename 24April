@@ -1,0 +1,259 @@
+Below is a clean, table-only, client-ready version of the canonical CDC schema. You can directly paste this into Word.
+
+
+---
+
+Canonical CDC Event Schema (CMWS)
+
+1. Purpose
+
+This schema standardizes all CDC events from CMWS into a unified structure for downstream processing and process mining. It ensures consistency across all schemas and source tables while preserving key workflow context.
+
+The design is based on the recommendation that WORKFLOW_HISTORY is the primary event source, with additional enrichment from other tables. 
+
+
+---
+
+2. Canonical Fields
+
+Field Name	Description	Source Mapping
+
+event_id	Unique identifier for each normalized event	Generated during transformation
+schema_name	Schema in which the event occurred (used for cross-schema tracking)	Derived from CDC metadata (e.g., LRKPROD, COBPROD, EPRPROD)
+case_id	Unique identifier of the workflow instance	document_id from source tables
+activity	Business-readable event name (e.g., Moved, Assigned, Reserved)	Derived from workflow_event_cd and event_data fields
+event_timestamp	Actual time when the event occurred in CMWS	created_date or modified_date
+resource_id	User who performed the action	user_ions_id / created_by / modified_by
+resource_name	Optional display name of the user	Derived via lookup if available
+source_system	Origin system of the event	Constant: CMWS
+source_table	Source table from which event is captured	WORKFLOW_HISTORY / DOCUMENT_QUEUE / DOCUMENT / CASE_DIARY
+source_operation	Type of database operation	INSERT / UPDATE / DELETE
+source_event_code	Original workflow event code	workflow_event_cd
+source_detail_1	Additional event context (primary detail)	event_data1 or equivalent
+source_detail_2	Additional event context (secondary detail)	event_data2 or equivalent
+queue_name	Name of the queue involved in the event	Derived from queue_id or event data
+queue_id	Identifier of the queue	DOCUMENT_QUEUE.queue_id
+assigned_to	User assigned to the document	DOCUMENT_QUEUE.assigned_to
+reserved_by	User who reserved the document	DOCUMENT_QUEUE.reserved_by
+document_type_cd	Type of document for context	DOCUMENT.document_type_cd
+prior_queue_id	Previous queue before transition	DOCUMENT_QUEUE.prior_queue_id
+prior_user	Previous user before reassignment	DOCUMENT_QUEUE.prior_user
+cdc_capture_time	Time when CDC captured the event	Added by CDC pipeline
+raw_payload	Complete original CDC record for traceability	Full CDC event
+
+
+
+---
+
+3. Source Table Mapping
+
+3.1 WORKFLOW_HISTORY (Primary Source)
+
+This is the main event table and should be used as the primary source for process mining. It records all workflow lifecycle events such as enqueue, move, assign, reserve, and dequeue. 
+
+Source Column	Canonical Field
+
+document_id	case_id
+workflow_event_cd	source_event_code
+user_ions_id	resource_id
+event_data1	source_detail_1
+event_data2	source_detail_2
+created_date	event_timestamp
+INSERT	source_operation
+WORKFLOW_HISTORY	source_table
+
+
+Activity Derivation
+
+Activity is derived from:
+
+workflow_event_cd
+
+event_data1
+
+
+Examples:
+
+Moved
+
+Assigned
+
+Reserved
+
+Enqueued
+
+Dequeued 
+
+
+
+---
+
+3.2 DOCUMENT_QUEUE (State Context)
+
+This table represents the current queue state and provides additional context about assignment, reservation, and transitions. 
+
+Source Column	Canonical Field
+
+document_id	case_id
+queue_id	queue_id
+assigned_to	assigned_to
+reserved_by	reserved_by
+prior_user	prior_user
+prior_queue_id	prior_queue_id
+created_date / modified_date	event_timestamp
+created_by / modified_by	resource_id
+INSERT / UPDATE / DELETE	source_operation
+DOCUMENT_QUEUE	source_table
+
+
+Activity Examples
+
+Enqueued
+
+Moved to Queue
+
+Assigned
+
+Reserved
+
+Dequeued
+
+
+
+---
+
+3.3 DOCUMENT (Metadata Context)
+
+This table provides document-level metadata and lifecycle events. It may generate high-frequency updates and should be used selectively. 
+
+Source Column	Canonical Field
+
+document_id	case_id
+document_type_cd	document_type_cd
+modified_date	event_timestamp
+modified_by	resource_id
+
+
+Activity Example
+
+Document Created
+
+
+
+---
+
+3.4 CASE_DIARY (Decision Context)
+
+This table captures user-entered notes and provides insight into decision-making. 
+
+Source Column	Canonical Field
+
+document_id	case_id
+diary_text	source_detail_1
+created_date	event_timestamp
+created_by	resource_id
+
+
+Activity Example
+
+Diary Entry Added
+
+
+
+---
+
+4. Recommended Phase-1 Scope
+
+Use WORKFLOW_HISTORY as the primary CDC source
+
+Include DOCUMENT_QUEUE only if queue context is required
+
+Keep DOCUMENT and CASE_DIARY as optional enrichment
+
+Ensure schema remains stable for future expansion 
+
+
+
+---
+
+5. Summary
+
+This canonical schema provides:
+
+A unified structure for all CDC events
+
+Alignment with process mining requirements
+
+Support for cross-schema workflows
+
+Flexibility for future enrichment
+
+
+It enables consistent ingestion, transformation, and analysis of CMWS workflow events across all 21 schemas. 
+
+
+---
+
+If you want, I can next:
+
+Convert this into a 1-page executive summary
+
+Or add a sample real event JSON (based on your DB) for stronger client presentation
+
+
+
+
+
+
+
+
+
+
+
+Executive Summary: Canonical CDC Event Schema for CMWS
+
+This canonical CDC event schema is intended to standardize workflow events extracted from CMWS into one consistent format for downstream processing, reporting, and process mining. The recommendation is based on the documents’ guidance that WORKFLOW_HISTORY is the primary event source, with DOCUMENT_QUEUE used for state context and DOCUMENT / CASE_DIARY used as supporting enrichment where needed. 
+
+Purpose
+
+CMWS workflow activity is already written into the database through stored procedures, and WORKFLOW_HISTORY is described as the main audit log for process mining. To make this usable across all 21 schemas, the CDC output should be normalized into a single canonical event structure. This gives us a stable format for event extraction, reduces schema-specific complexity, and makes the data ready for ELK and process mining tools. 
+
+Recommended Canonical Fields
+
+The core fields that should exist in every normalized CDC event are:
+
+Field	Purpose
+
+event_id	Unique ID for the normalized event
+schema_name	Identifies the CMWS schema/workflow source
+case_id	Business identifier for the workflow instance
+activity	Human-readable workflow action
+event_timestamp	Actual time the event occurred
+resource_id	User who performed the action
+source_system	CMWS
+source_table	Source CDC table
+source_operation	INSERT / UPDATE / DELETE
+source_event_code	Original workflow event code
+source_detail_1, source_detail_2	Extra context from the source record
+queue_name, queue_id	Queue/state context
+assigned_to, reserved_by	Ownership context
+prior_queue_id, prior_user	Previous state context
+cdc_capture_time	Time captured by the CDC pipeline
+raw_payload	Original source record for traceability
+
+
+Source Table Mapping
+
+WORKFLOW_HISTORY should be treated as the primary CDC source. It contains document_id, workflow_event_cd, user_ions_id, event_data1, event_data2, and created_date, which map directly to the canonical schema. The document identifies this table as the “gold mine” for process mining because it captures enqueue, move, reserve, assign, dequeue, and transfer events. 
+
+DOCUMENT_QUEUE should be used to capture queue-state changes such as movement, assignment, and reservation. DOCUMENT can be used for document lifecycle or metadata updates, but it is noisier and should be used carefully. CASE_DIARY can be used later for user notes and decision context if required. 
+
+Recommended Phase 1 Scope
+
+For the first version, the best approach is to start with WORKFLOW_HISTORY only, because it already behaves like an event log and provides most of the process-mining value. DOCUMENT_QUEUE can be added next if queue-state detail is required. DOCUMENT and CASE_DIARY can remain optional enrichment sources for later phases. This approach also aligns with the document’s recommendation to begin with the simplest and most complete event source. 
+
+Business Value
+
+This canonical schema gives us one standard event model across all CMWS workflows, makes CDC data easier to consume, and provides a stable foundation for ELK indexing and process mining analysis. It also supports cross-schema correlation by preserving schema_name, which is important because the 21 CMWS schemas share the same structure but represent different workflows. 
+
+If you want, I can turn this into a Word-ready formal section with title, subtitle, and cleaner business wording.

@@ -1,0 +1,652 @@
+WORKFLOW_HISTORY:
+Yes — below are 2 mock CDC records for each operation for the WORKFLOW_HISTORY table.
+
+1) Insert events (op: "c")
+
+{
+  "before": null,
+  "after": {
+    "WORKFLOW_HISTORY_ID": 2001,
+    "DOCUMENT_ID": 45,
+    "WORKFLOW_EVENT_CD": 63,
+    "USER_IONS_ID": "Z8PCMWS",
+    "EVENT_DATA1": "OSGLI Customer Service",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:42:53.503Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067769Z"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534800500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 556,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534800612
+}
+
+{
+  "before": null,
+  "after": {
+    "WORKFLOW_HISTORY_ID": 2002,
+    "DOCUMENT_ID": 46,
+    "WORKFLOW_EVENT_CD": 640,
+    "USER_IONS_ID": "ZBPCMWS",
+    "EVENT_DATA1": "ODC Reinstatement",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:42:54.976Z",
+    "CREATED_BY": "ZBPCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067788Z"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534801500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 557,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534801612
+}
+
+2) Update events (op: "u")
+
+{
+  "before": {
+    "WORKFLOW_HISTORY_ID": 2003,
+    "DOCUMENT_ID": 47,
+    "WORKFLOW_EVENT_CD": 647,
+    "USER_IONS_ID": "Z8PCMWS",
+    "EVENT_DATA1": "OSGLI Customer Service",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:43:00.133Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067807Z"
+  },
+  "after": {
+    "WORKFLOW_HISTORY_ID": 2003,
+    "DOCUMENT_ID": 47,
+    "WORKFLOW_EVENT_CD": 648,
+    "USER_IONS_ID": "Z8PCMWS",
+    "EVENT_DATA1": "OSGLI Customer Service - Updated",
+    "EVENT_DATA2": "Checked and confirmed",
+    "CREATED_DATE": "2005-03-01T11:43:00.133Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067807Z"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534802500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 558,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534802612
+}
+
+{
+  "before": {
+    "WORKFLOW_HISTORY_ID": 2004,
+    "DOCUMENT_ID": 48,
+    "WORKFLOW_EVENT_CD": 642,
+    "USER_IONS_ID": "ZAPOMWS",
+    "EVENT_DATA1": "ODC Reinstatement",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:43:02.493Z",
+    "CREATED_BY": "ZAPOMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067826Z"
+  },
+  "after": {
+    "WORKFLOW_HISTORY_ID": 2004,
+    "DOCUMENT_ID": 48,
+    "WORKFLOW_EVENT_CD": 643,
+    "USER_IONS_ID": "ZAPOMWS",
+    "EVENT_DATA1": "ODC Reinstatement - Approved",
+    "EVENT_DATA2": "Final review completed",
+    "CREATED_DATE": "2005-03-01T11:43:02.493Z",
+    "CREATED_BY": "ZAPOMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067826Z"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534803500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 559,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534803612
+}
+
+3) Delete events (op: "d")
+
+{
+  "before": {
+    "WORKFLOW_HISTORY_ID": 2005,
+    "DOCUMENT_ID": 49,
+    "WORKFLOW_EVENT_CD": 644,
+    "USER_IONS_ID": "Z3PCMWS",
+    "EVENT_DATA1": "OSGLI Customer Service",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:43:04.513Z",
+    "CREATED_BY": "Z3PCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067845Z"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534804500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 560,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534804612
+}
+
+{
+  "before": {
+    "WORKFLOW_HISTORY_ID": 2006,
+    "DOCUMENT_ID": 50,
+    "WORKFLOW_EVENT_CD": 649,
+    "USER_IONS_ID": "ZBPCMWS",
+    "EVENT_DATA1": "OSGLI Customer Service",
+    "EVENT_DATA2": null,
+    "CREATED_DATE": "2005-03-01T11:43:06.203Z",
+    "CREATED_BY": "ZBPCMWS",
+    "MODIFIED_TS": "2013-02-15T07:32:06.067864Z"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534805500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "WORKFLOW_HISTORY",
+    "txId": 561,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534805612
+}
+
+I can also turn these into a single JSON file format or prepare the next table in the same style.
+
+
+
+
+
+
+
+
+
+
+
+DOCUMENT_QUEUE:
+
+Yes — here are 2 mock CDC records each for DOCUMENT_QUEUE in the same format.
+
+I used the visible columns:
+
+DOCUMENT_ID, QUEUE_ID, QUEUE_TYPE_CD, RESERVED_BY, ASSIGNED_TO, PRIOR_USER, PRIOR_QUEUE_ID, CREATED_DATE, CREATED_BY, MODIFIED_DATE, MODIFIED_BY, MODIFIED_TS
+
+Because no single primary key is clearly shown, I treated DOCUMENT_ID + QUEUE_ID as the working key in the mock records.
+
+Insert events (op: "c")
+
+{
+  "before": null,
+  "after": {
+    "DOCUMENT_ID": 5001,
+    "QUEUE_ID": 13,
+    "QUEUE_TYPE_CD": 2,
+    "RESERVED_BY": null,
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": null,
+    "CREATED_DATE": "2007-08-24T21:01:40.643Z",
+    "CREATED_BY": "ZAPCMWS",
+    "MODIFIED_DATE": "2015-03-30T14:53:40.133Z",
+    "MODIFIED_BY": "X125669",
+    "MODIFIED_TS": "30-MAR-15 02.53.40.133537000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534800500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 601,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534800612
+}
+
+{
+  "before": null,
+  "after": {
+    "DOCUMENT_ID": 5002,
+    "QUEUE_ID": 17,
+    "QUEUE_TYPE_CD": 3,
+    "RESERVED_BY": "Z8PCMWS",
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": 13,
+    "CREATED_DATE": "2007-08-25T09:37:11.916Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_DATE": "2015-03-30T14:53:40.237Z",
+    "MODIFIED_BY": "X125669",
+    "MODIFIED_TS": "30-MAR-15 02.53.40.237991000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534801500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 602,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534801612
+}
+
+Update events (op: "u")
+
+{
+  "before": {
+    "DOCUMENT_ID": 5003,
+    "QUEUE_ID": 12,
+    "QUEUE_TYPE_CD": 2,
+    "RESERVED_BY": null,
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": 7,
+    "CREATED_DATE": "2007-08-25T09:45:18.970Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_DATE": "2015-03-30T14:53:40.133Z",
+    "MODIFIED_BY": "X125669",
+    "MODIFIED_TS": "30-MAR-15 02.53.40.133537000 PM"
+  },
+  "after": {
+    "DOCUMENT_ID": 5003,
+    "QUEUE_ID": 12,
+    "QUEUE_TYPE_CD": 2,
+    "RESERVED_BY": "X089402",
+    "ASSIGNED_TO": "Z8PCMWS",
+    "PRIOR_USER": "Z8PCMWS",
+    "PRIOR_QUEUE_ID": 7,
+    "CREATED_DATE": "2007-08-25T09:45:18.970Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_DATE": "2015-03-30T14:55:10.500Z",
+    "MODIFIED_BY": "X089402",
+    "MODIFIED_TS": "30-MAR-15 02.55.10.500000000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534802500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 603,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534802612
+}
+
+{
+  "before": {
+    "DOCUMENT_ID": 5004,
+    "QUEUE_ID": 7,
+    "QUEUE_TYPE_CD": 3,
+    "RESERVED_BY": null,
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": null,
+    "CREATED_DATE": "2007-08-25T09:56:20.006Z",
+    "CREATED_BY": "0004138",
+    "MODIFIED_DATE": "2015-03-30T14:56:30.110Z",
+    "MODIFIED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "30-MAR-15 02.56.30.110000000 PM"
+  },
+  "after": {
+    "DOCUMENT_ID": 5004,
+    "QUEUE_ID": 7,
+    "QUEUE_TYPE_CD": 3,
+    "RESERVED_BY": "X136326",
+    "ASSIGNED_TO": "X089402",
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": null,
+    "CREATED_DATE": "2007-08-25T09:56:20.006Z",
+    "CREATED_BY": "0004138",
+    "MODIFIED_DATE": "2015-03-30T14:58:00.250Z",
+    "MODIFIED_BY": "X136326",
+    "MODIFIED_TS": "30-MAR-15 02.58.00.250000000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534803500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 604,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534803612
+}
+
+Delete events (op: "d")
+
+{
+  "before": {
+    "DOCUMENT_ID": 5005,
+    "QUEUE_ID": 54,
+    "QUEUE_TYPE_CD": 13,
+    "RESERVED_BY": null,
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": 13,
+    "CREATED_DATE": "2007-08-25T09:50:47.443Z",
+    "CREATED_BY": "0004138",
+    "MODIFIED_DATE": "2015-03-30T14:57:15.900Z",
+    "MODIFIED_BY": "d004138",
+    "MODIFIED_TS": "30-MAR-15 02.57.15.900000000 PM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534804500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 605,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534804612
+}
+
+{
+  "before": {
+    "DOCUMENT_ID": 5006,
+    "QUEUE_ID": 22,
+    "QUEUE_TYPE_CD": 54,
+    "RESERVED_BY": "Z8PCMWS",
+    "ASSIGNED_TO": null,
+    "PRIOR_USER": null,
+    "PRIOR_QUEUE_ID": 13,
+    "CREATED_DATE": "2007-08-25T09:51:40.873Z",
+    "CREATED_BY": "d004138",
+    "MODIFIED_DATE": "2015-03-30T14:58:45.300Z",
+    "MODIFIED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "30-MAR-15 02.58.45.300000000 PM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534805500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENT_QUEUE",
+    "txId": 606,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534805612
+}
+
+Use this line if you want to send it to the team:
+
+I have prepared 2 mock CDC records each for insert, update, and delete for DOCUMENT_QUEUE based on the available table structure.
+
+Send the next table structure and I will prepare it in the same format.
+
+
+
+
+
+
+
+
+
+
+
+DOCUMENTS:
+Yes — here are 2 mock CDC records each for the DOCUMENTS table in the same structure.
+
+I am using these columns based on your table text:
+
+DOCUMENT_ID, DOCUMENT_TYPE_CD, LATEST_VERSION, CREATED_DATE, CREATED_BY, MODIFIED_DATE, MODIFIED_BY, MODIFIED_TS
+
+Insert events (op: "c")
+
+{
+  "before": null,
+  "after": {
+    "DOCUMENT_ID": 3001,
+    "DOCUMENT_TYPE_CD": 22,
+    "LATEST_VERSION": 4,
+    "CREATED_DATE": "2007-10-08T07:55:11.803Z",
+    "CREATED_BY": "D070805",
+    "MODIFIED_DATE": "2007-10-08T08:10:15.120Z",
+    "MODIFIED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864430 AM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534800500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 701,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534800612
+}
+
+{
+  "before": null,
+  "after": {
+    "DOCUMENT_ID": 3002,
+    "DOCUMENT_TYPE_CD": 27,
+    "LATEST_VERSION": 10,
+    "CREATED_DATE": "2007-10-03T09:31:49.310Z",
+    "CREATED_BY": "D060775",
+    "MODIFIED_DATE": "2007-10-03T09:40:20.500Z",
+    "MODIFIED_BY": "ZBPCMWS",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864501 AM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534801500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 702,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534801612
+}
+
+Update events (op: "u")
+
+{
+  "before": {
+    "DOCUMENT_ID": 3003,
+    "DOCUMENT_TYPE_CD": 4,
+    "LATEST_VERSION": 1,
+    "CREATED_DATE": "2007-08-24T22:41:15.946Z",
+    "CREATED_BY": "D067709",
+    "MODIFIED_DATE": "2007-08-24T22:50:00.000Z",
+    "MODIFIED_BY": "Z8PCMWS",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864526 AM"
+  },
+  "after": {
+    "DOCUMENT_ID": 3003,
+    "DOCUMENT_TYPE_CD": 4,
+    "LATEST_VERSION": 2,
+    "CREATED_DATE": "2007-08-24T22:41:15.946Z",
+    "CREATED_BY": "D067709",
+    "MODIFIED_DATE": "2007-08-24T23:00:10.250Z",
+    "MODIFIED_BY": "X089402",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864549 AM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534802500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 703,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534802612
+}
+
+{
+  "before": {
+    "DOCUMENT_ID": 3004,
+    "DOCUMENT_TYPE_CD": 5,
+    "LATEST_VERSION": 8,
+    "CREATED_DATE": "2007-08-25T09:41:14.896Z",
+    "CREATED_BY": "D058671",
+    "MODIFIED_DATE": "2007-08-25T09:45:00.000Z",
+    "MODIFIED_BY": "D004138",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864594 AM"
+  },
+  "after": {
+    "DOCUMENT_ID": 3004,
+    "DOCUMENT_TYPE_CD": 5,
+    "LATEST_VERSION": 9,
+    "CREATED_DATE": "2007-08-25T09:41:14.896Z",
+    "CREATED_BY": "D058671",
+    "MODIFIED_DATE": "2007-08-25T09:50:30.330Z",
+    "MODIFIED_BY": "X131601",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864618 AM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534803500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 704,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534803612
+}
+
+Delete events (op: "d")
+
+{
+  "before": {
+    "DOCUMENT_ID": 3005,
+    "DOCUMENT_TYPE_CD": 9,
+    "LATEST_VERSION": 13,
+    "CREATED_DATE": "2007-08-25T03:17:20.206Z",
+    "CREATED_BY": "LETTR P",
+    "MODIFIED_DATE": "2007-08-25T03:22:31.296Z",
+    "MODIFIED_BY": "LETTR P",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864687 AM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534804500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 705,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534804612
+}
+
+{
+  "before": {
+    "DOCUMENT_ID": 3006,
+    "DOCUMENT_TYPE_CD": 17,
+    "LATEST_VERSION": 2,
+    "CREATED_DATE": "2007-08-25T09:55:42.850Z",
+    "CREATED_BY": "D004138",
+    "MODIFIED_DATE": "2007-08-25T09:56:19.950Z",
+    "MODIFIED_BY": "D004138",
+    "MODIFIED_TS": "01-JAN-13 03.02.19.864710 AM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "cmws_db_prod",
+    "ts_ms": 1672534805500,
+    "db": "CMWS",
+    "schema": "LCNVPROD",
+    "table": "DOCUMENTS",
+    "txId": 706,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534805612
+}
+
+Use this line for your team update:
+
+I have prepared 2 mock CDC records each for insert, update, and delete for the DOCUMENTS table based on the available structure.
+
+Send the next table, and I will make the same format for that one too.
+

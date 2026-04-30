@@ -650,3 +650,235 @@ I have prepared 2 mock CDC records each for insert, update, and delete for the D
 
 Send the next table, and I will make the same format for that one too.
 
+
+
+
+
+
+
+
+
+
+
+LRK_CASE_LISTING: 
+Yes — here are 2 mock CDC records each for LRK_CASE_LISTING in the same style.
+
+I mapped the columns as:
+
+CONTROL_NUMBER, CASE_NAME, LEAD_CASE_ADMIN, BACKUP_CASE_ADMIN, INACTIVE_IND, CASE_TYPE, CREATED_DATE, CREATED_BY, MODIFIED_DATE, MODIFIED_BY, MODIFIED_TS
+
+Insert events (op: "c")
+
+{
+  "before": null,
+  "after": {
+    "CONTROL_NUMBER": 283,
+    "CASE_NAME": "Ethan Allen",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 5,
+    "CREATED_DATE": "2011-10-03T09:47:16.000Z",
+    "CREATED_BY": "D063126",
+    "MODIFIED_DATE": "2023-09-18T12:03:16.000Z",
+    "MODIFIED_BY": "X263099",
+    "MODIFIED_TS": "10-SEP-23 12.03.16.149378000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534800500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 801,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534800612
+}
+
+{
+  "before": null,
+  "after": {
+    "CONTROL_NUMBER": 2731,
+    "CASE_NAME": "Watkins",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 15,
+    "CREATED_DATE": "2005-12-30T14:42:53.000Z",
+    "CREATED_BY": "D010575",
+    "MODIFIED_DATE": "2006-08-04T10:23:18.706Z",
+    "MODIFIED_BY": "D021563",
+    "MODIFIED_TS": "20-DEC-12 12.52.41.782167 AM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534801500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 802,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534801612
+}
+
+Update events (op: "u")
+
+{
+  "before": {
+    "CONTROL_NUMBER": 1404,
+    "CASE_NAME": "DRS",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 3,
+    "CREATED_DATE": "2011-02-10T09:10:45.000Z",
+    "CREATED_BY": "D0078667",
+    "MODIFIED_DATE": "2011-02-10T09:10:45.333Z",
+    "MODIFIED_BY": "D0078667",
+    "MODIFIED_TS": "20-DEC-12 12.52.41.782441 AM"
+  },
+  "after": {
+    "CONTROL_NUMBER": 1404,
+    "CASE_NAME": "DRS",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "Y",
+    "CASE_TYPE": 3,
+    "CREATED_DATE": "2011-02-10T09:10:45.000Z",
+    "CREATED_BY": "D0078667",
+    "MODIFIED_DATE": "2023-09-18T12:05:00.000Z",
+    "MODIFIED_BY": "X263099",
+    "MODIFIED_TS": "18-SEP-23 12.05.00.000000000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534802500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 803,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534802612
+}
+
+{
+  "before": {
+    "CONTROL_NUMBER": 2590,
+    "CASE_NAME": "First National Bank",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 3,
+    "CREATED_DATE": "2010-07-12T15:41:38.100Z",
+    "CREATED_BY": "D063126",
+    "MODIFIED_DATE": "2010-07-12T15:41:38.883Z",
+    "MODIFIED_BY": "D0078667",
+    "MODIFIED_TS": "20-DEC-12 12.52.41.782867 AM"
+  },
+  "after": {
+    "CONTROL_NUMBER": 2590,
+    "CASE_NAME": "First National Bank - Updated",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D085503",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 4,
+    "CREATED_DATE": "2010-07-12T15:41:38.100Z",
+    "CREATED_BY": "D063126",
+    "MODIFIED_DATE": "2023-09-18T12:06:15.000Z",
+    "MODIFIED_BY": "X122476",
+    "MODIFIED_TS": "18-SEP-23 12.06.15.000000000 PM"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534803500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 804,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534803612
+}
+
+Delete events (op: "d")
+
+{
+  "before": {
+    "CONTROL_NUMBER": 1729,
+    "CASE_NAME": "JC Penney-cancelled 01-01-08",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "Y",
+    "CASE_TYPE": 14,
+    "CREATED_DATE": "2004-12-17T17:55:36.400Z",
+    "CREATED_BY": "D063126",
+    "MODIFIED_DATE": "2004-12-17T17:55:36.400Z",
+    "MODIFIED_BY": "D078667",
+    "MODIFIED_TS": "20-DEC-12 12.52.41.782632 AM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534804500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 805,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534804612
+}
+
+{
+  "before": {
+    "CONTROL_NUMBER": 2232,
+    "CASE_NAME": "Dressler",
+    "LEAD_CASE_ADMIN": "D085503",
+    "BACKUP_CASE_ADMIN": "D085503",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 6,
+    "CREATED_DATE": "2008-12-10T09:31:41.000Z",
+    "CREATED_BY": "D085503",
+    "MODIFIED_DATE": "2008-12-10T09:31:52.876Z",
+    "MODIFIED_BY": "D081713",
+    "MODIFIED_TS": "20-DEC-12 12.52.41.782673 AM"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lrk_db_prod",
+    "ts_ms": 1672534805500,
+    "db": "LRKPROD",
+    "schema": "LRKPROD",
+    "table": "LRK_CASE_LISTING",
+    "txId": 806,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534805612
+}
+
+Use this line for your team update:
+
+I have prepared 2 mock CDC records each for insert, update, and delete for LRK_CASE_LISTING based on the available structure.
+
+Send the next table structure and I will prepare the same format for that one too.

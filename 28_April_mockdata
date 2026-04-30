@@ -882,3 +882,248 @@ Use this line for your team update:
 I have prepared 2 mock CDC records each for insert, update, and delete for LRK_CASE_LISTING based on the available structure.
 
 Send the next table structure and I will prepare the same format for that one too.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+LCNV_CASE_LISTING: 
+Yes — here are 2 mock CDC records each for LCNV_CASE_LISTING in the same format.
+
+I used these columns from your structure:
+
+CONTROL_NUMBER, CASE_NAME, LEAD_CASE_ADMIN, BACKUP_CASE_ADMIN, INACTIVE_IND, CASE_TYPE, CREATED_DATE, CREATED_BY, MODIFIED_DATE, MODIFIED_BY, MODIFIED_TS, NY_SITUS_IND
+
+Insert events (op: "c")
+
+{
+  "before": null,
+  "after": {
+    "CONTROL_NUMBER": 10078,
+    "CASE_NAME": "UNITED AMERICAN VIDEO INC",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 1,
+    "CREATED_DATE": "2007-08-24T19:38:53.183Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.44.772396000 AM",
+    "NY_SITUS_IND": "N"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534800500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 901,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534800612
+}
+
+{
+  "before": null,
+  "after": {
+    "CONTROL_NUMBER": 10079,
+    "CASE_NAME": "First Hawaiian",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 1,
+    "CREATED_DATE": "2007-08-24T19:43:24.590Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.40.235339000 AM",
+    "NY_SITUS_IND": "Y"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534801500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 902,
+    "snapshot": "false"
+  },
+  "op": "c",
+  "ts_ms": 1672534801612
+}
+
+Update events (op: "u")
+
+{
+  "before": {
+    "CONTROL_NUMBER": 10080,
+    "CASE_NAME": "Cleveland County Abstract Company",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 1,
+    "CREATED_DATE": "2007-08-24T19:39:18.023Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.38.771724000 AM",
+    "NY_SITUS_IND": "N"
+  },
+  "after": {
+    "CONTROL_NUMBER": 10080,
+    "CASE_NAME": "Cleveland County Abstract Company - Updated",
+    "LEAD_CASE_ADMIN": "D063126",
+    "BACKUP_CASE_ADMIN": "D078667",
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 3,
+    "CREATED_DATE": "2007-08-24T19:39:18.023Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2023-09-18T12:10:00.000Z",
+    "MODIFIED_BY": "X263099",
+    "MODIFIED_TS": "18-SEP-23 12.10.00.000000000 PM",
+    "NY_SITUS_IND": "Y"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534802500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 903,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534802612
+}
+
+{
+  "before": {
+    "CONTROL_NUMBER": 10081,
+    "CASE_NAME": "GCT USA LP",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 1,
+    "CREATED_DATE": "2007-08-24T19:40:34.460Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.33.591644000 AM",
+    "NY_SITUS_IND": "N"
+  },
+  "after": {
+    "CONTROL_NUMBER": 10081,
+    "CASE_NAME": "GCT USA LP",
+    "LEAD_CASE_ADMIN": "D085503",
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "Y",
+    "CASE_TYPE": 2,
+    "CREATED_DATE": "2007-08-24T19:40:34.460Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2023-09-18T12:12:00.000Z",
+    "MODIFIED_BY": "X122476",
+    "MODIFIED_TS": "18-SEP-23 12.12.00.000000000 PM",
+    "NY_SITUS_IND": "N"
+  },
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534803500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 904,
+    "snapshot": "false"
+  },
+  "op": "u",
+  "ts_ms": 1672534803612
+}
+
+Delete events (op: "d")
+
+{
+  "before": {
+    "CONTROL_NUMBER": 10082,
+    "CASE_NAME": "American Games",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 1,
+    "CREATED_DATE": "2007-08-24T19:42:56.396Z",
+    "CREATED_BY": "DBLoad",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.35.305065000 AM",
+    "NY_SITUS_IND": "N"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534804500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 905,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534804612
+}
+
+{
+  "before": {
+    "CONTROL_NUMBER": 10083,
+    "CASE_NAME": "Whole Foods",
+    "LEAD_CASE_ADMIN": null,
+    "BACKUP_CASE_ADMIN": null,
+    "INACTIVE_IND": "N",
+    "CASE_TYPE": 4,
+    "CREATED_DATE": "2010-12-18T16:31:42.056Z",
+    "CREATED_BY": "Z8PCMWS",
+    "MODIFIED_DATE": "2018-03-13T01:28:32.000Z",
+    "MODIFIED_BY": "INFA",
+    "MODIFIED_TS": "13-MAR-18 01.28.46.876190000 AM",
+    "NY_SITUS_IND": "Y"
+  },
+  "after": null,
+  "source": {
+    "version": "2.4.0.Final",
+    "connector": "oracle",
+    "name": "lcnv_db_prod",
+    "ts_ms": 1672534805500,
+    "db": "LCNVPROD",
+    "schema": "LCNVPROD",
+    "table": "LCNV_CASE_LISTING",
+    "txId": 906,
+    "snapshot": "false"
+  },
+  "op": "d",
+  "ts_ms": 1672534805612
+}
+
+Use this line for the team update:
+
+I have prepared 2 mock CDC records each for insert, update, and delete for LCNV_CASE_LISTING based on the available structure.
+
+Send the next table and I will prepare it in the same format.

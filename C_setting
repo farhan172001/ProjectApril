@@ -1,18 +1,10 @@
 [Environment]::SetEnvironmentVariable(
-  "HTTP_PROXY",
-  "http://X296230:%23Farn007@internetproxy.prudential.com:8080",
-  "User"
+  "
 )
 
 [Environment]::SetEnvironmentVariable(
-  "HTTPS_PROXY",
-  "http://X296230:%23Farn007@internetproxy.prudential.com:8080",
-  "User"
+  "
 )
 
 
 
-
-
-setx HTTP_PROXY "http://X296230:%23Farn007@internetproxy.prudential.com:8080"
-setx HTTPS_PROXY "http://X296230:%23Farn007@internetproxy.prudential.com:8080"
